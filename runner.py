@@ -74,7 +74,7 @@ if __name__ == "__main__":
     hohna_data_7 = False
     hohna_data_8 = False
     primate_data_wang = False
-    ginkgo = True
+    ginkgo = False
 
     args = parse_args()
 
@@ -197,14 +197,9 @@ if __name__ == "__main__":
     if args.nested == True:
         import vncsmc as vcsmc
     else:
-        import vcsmc_jet as vcsmc
+        # import vcsmc_jet as vcsmc
+        import vcsmc as vcsmc
 
-
-    if args.nested == True:
-        import vncsmc as vcsmc
-    else:
-        import vcsmc_jet as vcsmc
-        
 
     #pdb.set_trace()
     vcsmc = vcsmc.VCSMC(datadict, K=args.n_particles, args=args)
