@@ -20,6 +20,7 @@ import pickle
 from tqdm import tqdm
 
 tf = tensorflow.compat.v1
+tf.disable_eager_execution()
 
 # @staticmethod
 def ncr(n, r):
