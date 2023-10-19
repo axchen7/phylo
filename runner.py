@@ -14,7 +14,7 @@ def parse_args():
                         description='Variational Combinatorial Sequential Monte Carlo')
     parser.add_argument('--dataset',
                         help='benchmark dataset to use.',
-                        default='primate_data')
+                        default='cellphy_toy_data')
     parser.add_argument('--n_particles',
                         type=int,
                         help='number of SMC samples.',
@@ -74,6 +74,7 @@ if __name__ == "__main__":
     hohna_data_7 = False
     hohna_data_8 = False
     primate_data_wang = False
+    cellphy_toy_data = False
     ginkgo = False
 
     args = parse_args()
@@ -94,6 +95,19 @@ if __name__ == "__main__":
                           'T': [0, 0, 0, 1],
                           '-': [1, 1, 1, 1],
                           '?': [1, 1, 1, 1]}
+    Alphabet_dir_unphased = {
+                                'A': [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                'C': [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                                'G': [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                                'T': [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                                'M': [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                                'R': [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                                'W': [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                                'S': [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                                'Y': [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                                'K': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                                'N': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                            }
     alphabet = np.array([[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]])
 
 
@@ -169,6 +183,13 @@ if __name__ == "__main__":
         datadict_raw = pd.read_pickle('data/primates_small.p')
         genome_strings = list(datadict_raw.values())
         datadict = form_dataset_from_strings(genome_strings, Alphabet_dir)
+
+
+    if cellphy_toy_data:
+        with open('data/cellphy_toy_set.phy') as f:
+            phy_file_raw = f.readlines()
+        genome_strings = [line[line.find(" "):].strip() for line in phy_file_raw[1:]]
+        datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_unphased, 10)
 
 
     if simulate_data:
