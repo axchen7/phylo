@@ -10,7 +10,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
 logging.getLogger('tensorflow').setLevel(logging.FATAL)
 import numpy as np
-import tensorflow.compat.v1 as tf
+import tensorflow
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 import pdb
@@ -18,6 +18,8 @@ import random
 from datetime import datetime
 import pickle
 from tqdm import tqdm
+
+tf = tensorflow.compat.v1
 
 # @staticmethod
 def ncr(n, r):
