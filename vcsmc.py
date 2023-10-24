@@ -121,7 +121,20 @@ class VCSMC:
         self.A = len(self.genome_NxSxA[0, 0])
         self.left_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='left_branches_param'))
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
-        if not args.jcmodel:
+        if (args.gt10model):
+            # assume A=10
+            # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
+            self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
+            self.nucleotide_exchangeability = tf.concat([self.nucleotide_exchangeability, [tf.constant(1, dtype=tf.float64)]], axis=0)
+
+            # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT)
+            # note: pi_GT = 1 - sum of other stationary freqs
+            self.y_station = tf.Variable(np.zeros(9) + 1 / 10, dtype=tf.float64, name='Stationary_probs')
+            self.y_station = tf.concat([self.y_station, [tf.reduce_sum(1 - self.y_station)]], axis=0)
+
+            self.y_q = self.get_Q_GT10()
+            self.Qmatrix = self.get_Q()
+        elif not args.jcmodel:
             self.y_q = tf.linalg.set_diag(tf.Variable(np.zeros((self.A, self.A)) + 1/self.A, dtype=tf.float64, name='Qmatrix'), [0]*self.A)
             self.Qmatrix = self.get_Q()
             self.y_station = tf.Variable(np.zeros(self.A) + 1 / self.A, dtype=tf.float64, name='Stationary_probs')
@@ -149,6 +162,31 @@ class VCSMC:
         hyphens = tf.reduce_sum(q_entry, axis=1)
         Q = tf.linalg.set_diag(q_entry, -hyphens)
         return Q
+
+    def get_Q_GT10(self):
+        """
+        Forms the transition matrix using the CellPhy GT10 model, which is less
+        computationally expensive than the full GT16 model. Assumes A=10.
+        """
+        pi = self.nucleotide_exchangeability # length 6
+        pi2 = tf.repeat(pi, 2)
+
+        # index helpers for Q matrix
+        AA, CC, GG, TT, AC, AG, AT, CG, CT, GT = range(10)
+
+        updates = [
+            [AA, AC], [AC, CC], # A<->C
+            [AA, AG], [AG, GG], # A<->G
+            [AA, AT], [AT, TT], # A<->T
+            [CC, CG], [CG, GG], # C<->G
+            [CC, CT], [CT, TT], # C<->T
+            [GG, GT], [GT, TT], # G<->T
+        ]
+        updates_transposed = [[x[1], x[0]] for x in updates]
+
+        R = tf.scatter_nd(updates, pi2, [10, 10]) + tf.scatter_nd(updates_transposed, pi2, [10, 10])
+        y_q = tf.matmul(R, tf.linalg.diag(self.y_station))
+        return y_q
 
     def conditional_likelihood(self, l_data, r_data, l_branch, r_branch):
         """
