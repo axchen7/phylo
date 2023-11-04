@@ -50,6 +50,9 @@ def parse_args():
                        default=False, 
                        type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument('--gt10model', 
+                       default=False, 
+                       type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('--gt16model', 
                        default=True, 
                        type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument('--memory_optimization',
@@ -98,7 +101,22 @@ if __name__ == "__main__":
                           'T': [0, 0, 0, 1],
                           '-': [1, 1, 1, 1],
                           '?': [1, 1, 1, 1]}
+    Alphabet_dir_phased = {
+                                #     AA CC GG TT AC AG AT CG CT GT CA GA TA GC TC TG
+                                'A': [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # A/A
+                                'C': [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # C/C
+                                'G': [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # G/G
+                                'T': [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # T/T
+                                'M': [0, 0, 0, 0,.5, 0, 0, 0, 0, 0,.5, 0, 0, 0, 0, 0], # A/C
+                                'R': [0, 0, 0, 0, 0,.5, 0, 0, 0, 0, 0,.5, 0, 0, 0, 0], # A/G
+                                'W': [0, 0, 0, 0, 0, 0,.5, 0, 0, 0, 0, 0,.5, 0, 0, 0], # A/T
+                                'S': [0, 0, 0, 0, 0, 0, 0,.5, 0, 0, 0, 0, 0,.5, 0, 0], # C/G
+                                'Y': [0, 0, 0, 0, 0, 0, 0, 0,.5, 0, 0, 0, 0, 0,.5, 0], # C/T
+                                'K': [0, 0, 0, 0, 0, 0, 0, 0, 0,.5, 0, 0, 0, 0, 0,.5], # G/T
+                                'N': [1/16] * 16, # blank
+                            }
     Alphabet_dir_unphased = {
+                                #     AA CC GG TT AC AG AT CG CT GT
                                 'A': [1, 0, 0, 0, 0, 0, 0, 0, 0, 0], # A/A
                                 'C': [0, 1, 0, 0, 0, 0, 0, 0, 0, 0], # C/C
                                 'G': [0, 0, 1, 0, 0, 0, 0, 0, 0, 0], # G/G
@@ -109,7 +127,7 @@ if __name__ == "__main__":
                                 'S': [0, 0, 0, 0, 0, 0, 0, 1, 0, 0], # C/G
                                 'Y': [0, 0, 0, 0, 0, 0, 0, 0, 1, 0], # C/T
                                 'K': [0, 0, 0, 0, 0, 0, 0, 0, 0, 1], # G/T
-                                'N': [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], # blank
+                                'N': [1/10] * 10, # blank
                             }
     alphabet = np.array([[1., 0., 0., 0.], [0., 1., 0., 0.], [0., 0., 1., 0.], [0., 0., 0., 1.]])
 
@@ -192,7 +210,10 @@ if __name__ == "__main__":
         with open('data/cellphy_toy_set.phy') as f:
             phy_file_raw = f.readlines()
         genome_strings = [line[line.find(" "):].strip() for line in phy_file_raw[1:]]
-        datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_unphased, 10)
+        if args.gt16model:
+            datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_phased, 16)
+        else:
+            datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_unphased, 10)
 
 
     if simulate_data:

@@ -121,7 +121,19 @@ class VCSMC:
         self.A = len(self.genome_NxSxA[0, 0])
         self.left_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='left_branches_param'))
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
-        if (args.gt10model):
+        if (args.gt16model):
+            # assume A=16
+            # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
+            self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
+            self.nucleotide_exchangeability = tf.concat([self.nucleotide_exchangeability, [tf.constant(1, dtype=tf.float64)]], axis=0)
+
+            # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT, pi_CA, pi_GA, pi_TA, pi_GC, pi_TC, pi_TG)
+            # use softmax to ensure all entries are positive
+            self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
+            self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+
+            self.Qmatrix = self.get_Q_GT16()
+        elif (args.gt10model):
             # assume A=10
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
             self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
@@ -160,6 +172,33 @@ class VCSMC:
         q_entry = tf.multiply(tf.linalg.set_diag(tf.exp(self.y_q), [0]*self.A), 1/denom)
         hyphens = tf.reduce_sum(q_entry, axis=1)
         Q = tf.linalg.set_diag(q_entry, -hyphens)
+        return Q
+
+    def get_Q_GT16(self):
+        """
+        Forms the transition matrix using the CellPhy GT16 model. Assumes A=16.
+        """
+        pi = self.nucleotide_exchangeability # length 6
+        pi4 = tf.repeat(pi, 4)
+
+        # index helpers for Q matrix
+        AA, CC, GG, TT, AC, AG, AT, CG, CT, GT, CA, GA, TA, GC, TC, TG = range(16)
+
+        updates = [
+            [AA, AC], [AC, CC], [AA, CA], [CA, CC], # A<->C
+            [AA, AG], [AG, GG], [AA, GA], [GA, GG], # A<->G
+            [AA, AT], [AT, TT], [AA, TA], [TA, TT], # A<->T
+            [CC, CG], [CG, GG], [CC, GC], [GC, GG], # C<->G
+            [CC, CT], [CT, TT], [CC, TC], [TC, TT], # C<->T
+            [GG, GT], [GT, TT], [GG, TG], [TG, TT], # G<->T
+        ]
+
+        R = tf.scatter_nd(updates, pi4, [16, 16])
+        R = R + tf.transpose(R)
+
+        y_q = tf.matmul(R, tf.linalg.diag(self.y_station))
+        hyphens = tf.reduce_sum(y_q, axis=1)
+        Q = tf.linalg.set_diag(y_q, -hyphens)
         return Q
 
     def get_Q_GT10(self):
