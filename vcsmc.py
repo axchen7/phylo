@@ -123,17 +123,15 @@ class VCSMC:
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
         if (args.gt10model):
             # assume A=10
-            # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
-            self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
-            self.nucleotide_exchangeability = tf.concat([self.nucleotide_exchangeability, [tf.constant(1, dtype=tf.float64)]], axis=0)
+            # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T))
+            self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
 
             # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT)
-            # note: pi_GT = 1 - sum of other stationary freqs
-            self.y_station = tf.Variable(np.zeros(9) + 1 / 10, dtype=tf.float64, name='Stationary_probs')
-            self.y_station = tf.concat([self.y_station, [tf.reduce_sum(1 - self.y_station)]], axis=0)
+            # use softmax to ensure all entries are positive
+            self.y_station = tf.exp(tf.Variable(np.zeros(10), dtype=tf.float64, name='Stationary_probs'))
+            self.y_station = self.y_station / tf.reduce_sum(self.y_station)
 
-            self.y_q = self.get_Q_GT10()
-            self.Qmatrix = self.get_Q()
+            self.Qmatrix = self.get_Q_GT10()
         elif not args.jcmodel:
             self.y_q = tf.linalg.set_diag(tf.Variable(np.zeros((self.A, self.A)) + 1/self.A, dtype=tf.float64, name='Qmatrix'), [0]*self.A)
             self.Qmatrix = self.get_Q()
@@ -182,11 +180,14 @@ class VCSMC:
             [CC, CT], [CT, TT], # C<->T
             [GG, GT], [GT, TT], # G<->T
         ]
-        updates_transposed = [[x[1], x[0]] for x in updates]
 
-        R = tf.scatter_nd(updates, pi2, [10, 10]) + tf.scatter_nd(updates_transposed, pi2, [10, 10])
+        R = tf.scatter_nd(updates, pi2, [10, 10])
+        R = R + tf.transpose(R)
+
         y_q = tf.matmul(R, tf.linalg.diag(self.y_station))
-        return y_q
+        hyphens = tf.reduce_sum(y_q, axis=1)
+        Q = tf.linalg.set_diag(y_q, -hyphens)
+        return Q
 
     def conditional_likelihood(self, l_data, r_data, l_branch, r_branch):
         """
@@ -588,7 +589,8 @@ class VCSMC:
                                self.v_minus,
                                self.left_branches_param,
                                self.right_branches_param,
-                               self.jump_chains],
+                               self.jump_chains,
+                               self.nucleotide_exchangeability],
                                feed_dict={self.core: data})
             cost = output[0]
             stats = output[1]
@@ -603,9 +605,11 @@ class VCSMC:
             lb_param = output[10]
             rb_param = output[11]
             jc = output[12]
+            exchangeability = output[13]
             print('Epoch', i+1)
             print('ELBO\n', round(-cost, 3))
             print('Stationary probabilities\n', stats)
+            print('Exchangeability\n', exchangeability)
             print('Q-matrix\n', Qs)
             # print('Left branches\n', lb)
             # print('Right branches\n', rb)
