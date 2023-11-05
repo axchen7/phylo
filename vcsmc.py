@@ -100,8 +100,50 @@ def gather_across_core(a, idx, a_shape_1=None, idx_shape_1=None, A=4):
     return a_gathered
 
 
+def gt16_genotype_likelihood(actual, observed, delta, epsilon):
+    """
+    computes the CellPhy GT16 likelihood of observed genotype given actual
+    genotype and the ADO rate (delta) and ERR rate (epsilon). The `observed` and
+    `actual` genotype params are values between 0 and 15, inclusive,
+    corresponding to the phased pairs AA CC GG TT AC AG AT CG CT GT CA GA TA GC
+    TC TG.
+    """
 
+    pair_map = [
+        (0, 0), (1, 1), (2, 2), (3, 3),                 # AA CC GG TT
+        (0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3), # AC AG AT CG CT GT
+        (1, 0), (2, 0), (3, 0), (2, 1), (3, 1), (3, 2)  # CA GA TA GC TC TG
+    ]
 
+    actual_first, actual_second = pair_map[actual]
+    observed_first, observed_second = pair_map[observed]
+
+    actual_is_homo = actual_first == actual_second
+    observed_is_homo = observed_first == observed_second
+
+    first_matches = observed_first == actual_first
+    second_matches = observed_second == actual_second
+
+    if actual_is_homo:
+        if first_matches and second_matches:  # aa|aa
+            return 1 - epsilon + (1 / 2) * delta * epsilon
+        elif first_matches or second_matches:  # ab|aa or ba|aa
+            return (1 - delta) * (1 / 6) * epsilon
+        elif observed_is_homo:  # bb | aa
+            return (1 / 6) * delta * epsilon
+        else:
+            return 0
+    else:
+        if observed_is_homo and (first_matches or second_matches):  # aa|ab
+            return (1 / 2) * delta + (1 / 6) * epsilon - (1 / 3) * delta * epsilon
+        elif observed_is_homo:  # cc|ab
+            return (1 / 6) * delta * epsilon
+        elif first_matches and second_matches:  # ab|ab
+            return (1 - delta) * (1 - epsilon)
+        elif first_matches or second_matches:  # ac|ab
+            return (1 - delta) * (1 / 6) * epsilon
+        else:
+            return 0
 
 class VCSMC:
     """
@@ -228,6 +270,27 @@ class VCSMC:
         hyphens = tf.reduce_sum(y_q, axis=1)
         Q = tf.linalg.set_diag(y_q, -hyphens)
         return Q
+
+    def gt_16_incorporate_error_rates(self, genome_KxNxSxA, delta, epsilon):
+        # pre-compute 16x16 matrix of genotype likelihoods with axes as (actual, observed)
+
+        actual_flat = tf.repeat(tf.range(16, dtype=tf.int8), 16) # [0,0,0,...,1,1,1,...]
+        observed_flat = tf.tile(tf.range(16, dtype=tf.int8), [16])   # [0,1,2,...,0,1,2,...]
+        # [[0,0], [0,1], [0,2], ..., [1,0], [1,1], [1,2], ...
+        stacked = tf.transpose(tf.stack([actual_flat, observed_flat]))
+
+        def compute_likelihood(x):
+            return gt16_genotype_likelihood(x[0], x[1], delta, epsilon)
+
+        likelihoods_flat = tf.vectorized_map(compute_likelihood, stacked)
+        likelihoods = tf.reshape(likelihoods_flat, [16, 16])
+
+        def incorporate_error(genome):
+            # genome is length A
+            return tf.matmul(likelihoods, tf.expand_dims(genome, axis=1), b_is_sparse=True)
+
+        flattened = tf.reshape(genome_KxNxSxA, (-1, 16))
+        return tf.reshape(tf.vectorized_map(incorporate_error, flattened), (self.K, self.N, -1, 16))
 
     def conditional_likelihood(self, l_data, r_data, l_branch, r_branch):
         """
@@ -494,6 +557,8 @@ class VCSMC:
         K = self.K
 
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, N, None, A))
+        self.core = self.gt_16_incorporate_error_rates(self.core, None, None) # TODO incorporate error rates
+
         leafnode_num_record = tf.constant(1, shape=(K, N), dtype=tf.int32) # Keeps track of self.core
 
         left_branches = tf.constant(0, shape=(1, K), dtype=tf.float64)
