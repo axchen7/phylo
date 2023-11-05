@@ -179,6 +179,9 @@ class VCSMC:
             self.y_station = self.y_station / tf.reduce_sum(self.y_station)
 
             self.Qmatrix = self.get_Q_GT16()
+
+            self.delta = tf.exp(-tf.square(tf.Variable(0.5, dtype=tf.float64, name='ADO_rate')))
+            self.epsilon = tf.exp(-tf.square(tf.Variable(0.5, dtype=tf.float64, name='ERR_rate')))
         elif (args.gt10model):
             # assume A=10
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
@@ -561,9 +564,13 @@ class VCSMC:
         K = self.K
 
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, N, None, A))
-        self.core = self.gt_16_incorporate_error_rates(self.core, tf.constant(0.5, dtype=tf.float64), tf.constant(0.5, dtype=tf.float64)) # TODO incorporate error rates
 
-        leafnode_num_record = tf.constant(1, shape=(K, N), dtype=tf.int32) # Keeps track of self.core
+        if self.args.gt16model:
+            core = self.gt_16_incorporate_error_rates(self.core, self.delta, self.epsilon)
+        else:
+            core = self.core
+
+        leafnode_num_record = tf.constant(1, shape=(K, N), dtype=tf.int32) # Keeps track of core
 
         left_branches = tf.constant(0, shape=(1, K), dtype=tf.float64)
         right_branches = tf.constant(0, shape=(1, K), dtype=tf.float64)
@@ -582,7 +589,7 @@ class VCSMC:
             self.cond_rank_update, 
             self.body_rank_update,
             loop_vars=[log_weights, log_likelihood, log_likelihood_tilde, self.jump_chains, self.jump_chain_tensor, 
-                       self.core, leafnode_num_record, left_branches, right_branches, v_minus, tf.constant(0)],
+                       core, leafnode_num_record, left_branches, right_branches, v_minus, tf.constant(0)],
             shape_invariants=[tf.TensorShape([None, K]), tf.TensorShape([None, K]), log_likelihood_tilde.get_shape(),
                               tf.TensorShape([K, None]), tf.TensorShape([K, None]), tf.TensorShape([K, None, None, A]),
                               tf.TensorShape([K, None]), tf.TensorShape([None, K]), tf.TensorShape([None, K]), 
@@ -699,7 +706,9 @@ class VCSMC:
                                self.left_branches_param,
                                self.right_branches_param,
                                self.jump_chains,
-                               self.nucleotide_exchangeability],
+                               self.nucleotide_exchangeability,
+                               self.delta,
+                               self.epsilon],
                                feed_dict={self.core: data})
             cost = output[0]
             stats = output[1]
@@ -715,10 +724,14 @@ class VCSMC:
             rb_param = output[11]
             jc = output[12]
             exchangeability = output[13]
+            delta = output[14]
+            epsilon = output[15]
             print('Epoch', i+1)
             print('ELBO\n', round(-cost, 3))
             print('Stationary probabilities\n', stats)
             print('Exchangeability\n', exchangeability)
+            print('Delta\n', delta)
+            print('Epsilon\n', epsilon)
             print('Q-matrix\n', Qs)
             # print('Left branches\n', lb)
             # print('Right branches\n', rb)
