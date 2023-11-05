@@ -100,6 +100,7 @@ def gather_across_core(a, idx, a_shape_1=None, idx_shape_1=None, A=4):
     return a_gathered
 
 
+@tf.function
 def gt16_genotype_likelihood(actual, observed, delta, epsilon):
     """
     computes the CellPhy GT16 likelihood of observed genotype given actual
@@ -109,41 +110,44 @@ def gt16_genotype_likelihood(actual, observed, delta, epsilon):
     TC TG.
     """
 
-    pair_map = [
+    pair_map = tf.constant([
         (0, 0), (1, 1), (2, 2), (3, 3),                 # AA CC GG TT
         (0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3), # AC AG AT CG CT GT
         (1, 0), (2, 0), (3, 0), (2, 1), (3, 1), (3, 2)  # CA GA TA GC TC TG
-    ]
+    ])
 
-    actual_first, actual_second = pair_map[actual]
-    observed_first, observed_second = pair_map[observed]
+    actual_first = pair_map[actual][0]
+    actual_second = pair_map[actual][1]
 
-    actual_is_homo = actual_first == actual_second
-    observed_is_homo = observed_first == observed_second
+    observed_first = pair_map[observed][0]
+    observed_second = pair_map[observed][1]
 
-    first_matches = observed_first == actual_first
-    second_matches = observed_second == actual_second
+    actual_is_homo = tf.equal(actual_first, actual_second)
+    observed_is_homo = tf.equal(observed_first, observed_second)
+
+    first_matches = tf.equal(observed_first, actual_first)
+    second_matches = tf.equal(observed_second, actual_second)
 
     if actual_is_homo:
-        if first_matches and second_matches:  # aa|aa
+        if tf.math.logical_and(first_matches, second_matches):  # aa|aa
             return 1 - epsilon + (1 / 2) * delta * epsilon
-        elif first_matches or second_matches:  # ab|aa or ba|aa
+        elif tf.math.logical_or(first_matches, second_matches):  # ab|aa or ba|aa
             return (1 - delta) * (1 / 6) * epsilon
         elif observed_is_homo:  # bb | aa
             return (1 / 6) * delta * epsilon
         else:
-            return 0
+            return tf.constant(0, dtype=tf.float64)
     else:
-        if observed_is_homo and (first_matches or second_matches):  # aa|ab
+        if tf.math.logical_and(observed_is_homo, tf.math.logical_or(first_matches, second_matches)):  # aa|ab
             return (1 / 2) * delta + (1 / 6) * epsilon - (1 / 3) * delta * epsilon
         elif observed_is_homo:  # cc|ab
             return (1 / 6) * delta * epsilon
-        elif first_matches and second_matches:  # ab|ab
+        elif tf.math.logical_and(first_matches, second_matches):  # ab|ab
             return (1 - delta) * (1 - epsilon)
-        elif first_matches or second_matches:  # ac|ab
+        elif tf.math.logical_or(first_matches, second_matches):  # ac|ab
             return (1 - delta) * (1 / 6) * epsilon
         else:
-            return 0
+            return tf.constant(0, dtype=tf.float64)
 
 class VCSMC:
     """
@@ -274,8 +278,8 @@ class VCSMC:
     def gt_16_incorporate_error_rates(self, genome_KxNxSxA, delta, epsilon):
         # pre-compute 16x16 matrix of genotype likelihoods with axes as (actual, observed)
 
-        actual_flat = tf.repeat(tf.range(16, dtype=tf.int8), 16) # [0,0,0,...,1,1,1,...]
-        observed_flat = tf.tile(tf.range(16, dtype=tf.int8), [16])   # [0,1,2,...,0,1,2,...]
+        actual_flat = tf.repeat(tf.range(16, dtype=tf.int32), 16) # [0,0,0,...,1,1,1,...]
+        observed_flat = tf.tile(tf.range(16, dtype=tf.int32), [16])   # [0,1,2,...,0,1,2,...]
         # [[0,0], [0,1], [0,2], ..., [1,0], [1,1], [1,2], ...
         stacked = tf.transpose(tf.stack([actual_flat, observed_flat]))
 
@@ -557,7 +561,7 @@ class VCSMC:
         K = self.K
 
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, N, None, A))
-        self.core = self.gt_16_incorporate_error_rates(self.core, None, None) # TODO incorporate error rates
+        self.core = self.gt_16_incorporate_error_rates(self.core, tf.constant(0.5, dtype=tf.float64), tf.constant(0.5, dtype=tf.float64)) # TODO incorporate error rates
 
         leafnode_num_record = tf.constant(1, shape=(K, N), dtype=tf.int32) # Keeps track of self.core
 
