@@ -180,8 +180,9 @@ class VCSMC:
 
             self.Qmatrix = self.get_Q_GT16()
 
-            self.delta = tf.exp(-tf.square(tf.Variable(0.5, dtype=tf.float64, name='ADO_rate')))
-            self.epsilon = tf.exp(-tf.square(tf.Variable(0.5, dtype=tf.float64, name='ERR_rate')))
+            # use sigmoid to ensure errors are in [0, 1]
+            self.delta = 1 / (1 + tf.exp(-tf.Variable(0, dtype=tf.float64, name='ADO_rate')))
+            self.epsilon = 1 / (1 + tf.exp(-tf.Variable(0, dtype=tf.float64, name='ERR_rate')))
         elif (args.gt10model):
             # assume A=10
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
