@@ -5,6 +5,8 @@ An implementation of Twisted Variational Combinatorial Sequential Monte Carlo fo
   and perform Bayesian phylogenetic inference.
 """
 
+# fmt: off
+
 import logging
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
