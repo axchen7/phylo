@@ -233,21 +233,22 @@ class VCSMC:
         Forms the transition matrix using the CellPhy GT16 model. Assumes A=16.
         """
         pi = self.nucleotide_exchangeability # length 6
-        pi4 = tf.repeat(pi, 4)
+        pi8 = tf.repeat(pi, 8)
 
         # index helpers for Q matrix
         AA, CC, GG, TT, AC, AG, AT, CG, CT, GT, CA, GA, TA, GC, TC, TG = range(16)
 
         updates = [
-            [AA, AC], [AC, CC], [AA, CA], [CA, CC], # A<->C
-            [AA, AG], [AG, GG], [AA, GA], [GA, GG], # A<->G
-            [AA, AT], [AT, TT], [AA, TA], [TA, TT], # A<->T
-            [CC, CG], [CG, GG], [CC, GC], [GC, GG], # C<->G
-            [CC, CT], [CT, TT], [CC, TC], [TC, TT], # C<->T
-            [GG, GT], [GT, TT], [GG, TG], [TG, TT], # G<->T
+          # | first base changes                    | second base changes
+            [AA, CA], [AC, CC], [AG, CG], [AT, CT], [AA, AC], [CA, CC], [GA, GC], [TA, TC], # A->C
+            [AA, GA], [AC, GC], [AG, GG], [AT, GT], [AA, AG], [CA, CG], [GA, GG], [TA, TG], # A->G
+            [AA, TA], [AC, TC], [AG, TG], [AT, TT], [AA, AT], [CA, CT], [GA, GT], [TA, TT], # A->T
+            [CA, GA], [CC, GC], [CG, GG], [CT, GT], [AC, AG], [CC, CG], [GC, GG], [TC, TG], # C->G
+            [CA, TA], [CC, TC], [CG, TG], [CT, TT], [AC, AT], [CC, CT], [GC, GT], [TC, TT], # C->T
+            [GA, TA], [GC, TC], [GG, TG], [GT, TT], [AG, AT], [CG, CT], [GG, GT], [TG, TT], # G->T
         ]
 
-        R = tf.scatter_nd(updates, pi4, [16, 16])
+        R = tf.scatter_nd(updates, pi8, [16, 16])
         R = R + tf.transpose(R)
 
         y_q = tf.matmul(R, tf.linalg.diag(self.y_station))
