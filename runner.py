@@ -83,6 +83,7 @@ if __name__ == "__main__":
     hohna_data_8 = False
     primate_data_wang = False
     cellphy_toy_data = False
+    cellphy_simulated_data = False
     ginkgo = False
 
     args = parse_args()
@@ -208,16 +209,26 @@ if __name__ == "__main__":
         datadict = form_dataset_from_strings(genome_strings, Alphabet_dir)
 
 
-    if cellphy_toy_data:
-        with open('data/cellphy_toy_set.phy') as f:
+    def parse_cellphy(file):
+        with open(file) as f:
             phy_file_raw = f.readlines()
-        genome_strings = [line[line.find(" "):].strip() for line in phy_file_raw[1:]]
-        if args.cellphy_model == 'gt16':
-            datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_phased, 16)
-        elif args.cellphy_model == 'gt10':
-            datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_unphased, 10)
-        else:
-            raise ValueError('To use cellphy_toy_set.phy, you must specify --cellphy_model (either gt10 or gt16)')
+            genome_strings = [line[line.find(" "):].strip() for line in phy_file_raw[1:]]
+            if args.cellphy_model == 'gt16':
+                datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_phased, 16)
+            elif args.cellphy_model == 'gt10':
+                datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_unphased, 10)
+            else:
+                raise ValueError('To use a .phy dataset, you must specify --cellphy_model (either gt10 or gt16)')
+        
+        return datadict
+
+
+    if cellphy_toy_data:
+        datadict = parse_cellphy('data/cellphy_toy_set.phy')
+
+
+    if cellphy_simulated_data:
+        datadict = parse_cellphy('data/cellphy_simulated_set.phy')
 
 
     if simulate_data:
