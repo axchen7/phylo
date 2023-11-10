@@ -49,12 +49,9 @@ def parse_args():
     parser.add_argument('--jcmodel', 
                        default=False, 
                        type=lambda x: (str(x).lower() == 'true'))
-    parser.add_argument('--gt10model', 
-                       default=False, 
-                       type=lambda x: (str(x).lower() == 'true'))
-    parser.add_argument('--gt16model', 
-                       default=True, 
-                       type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('--cellphy_model',  # either 'gt10' or 'gt16'
+                       default=None, 
+                       type=str)
     parser.add_argument('--memory_optimization',
                        help='Use memory optimization?',
                        default='on')
@@ -210,10 +207,12 @@ if __name__ == "__main__":
         with open('data/cellphy_toy_set.phy') as f:
             phy_file_raw = f.readlines()
         genome_strings = [line[line.find(" "):].strip() for line in phy_file_raw[1:]]
-        if args.gt16model:
+        if args.cellphy_model == 'gt16':
             datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_phased, 16)
-        else:
+        elif args.cellphy_model == 'gt10':
             datadict = form_dataset_from_strings(genome_strings, Alphabet_dir_unphased, 10)
+        else:
+            raise ValueError('To use cellphy_toy_set.phy, you must specify --cellphy_model (either gt10 or gt16)')
 
 
     if simulate_data:

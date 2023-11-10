@@ -167,7 +167,7 @@ class VCSMC:
         self.A = len(self.genome_NxSxA[0, 0])
         self.left_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='left_branches_param'))
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
-        if (args.gt16model):
+        if args.cellphy_model == 'gt16':
             # assume A=16
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
             self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
@@ -183,7 +183,7 @@ class VCSMC:
             # use sigmoid to ensure errors are in [0, 1]
             self.delta = 1 / (1 + tf.exp(-tf.Variable(0, dtype=tf.float64, name='ADO_rate')))
             self.epsilon = 1 / (1 + tf.exp(-tf.Variable(0, dtype=tf.float64, name='ERR_rate')))
-        elif (args.gt10model):
+        elif args.cellphy_model == 'gt10':
             # assume A=10
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
             self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
@@ -566,7 +566,7 @@ class VCSMC:
 
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, N, None, A))
 
-        if self.args.gt16model:
+        if self.args.cellphy_model == 'gt16':
             core = self.gt_16_incorporate_error_rates(self.core, self.delta, self.epsilon)
         else:
             core = self.core
