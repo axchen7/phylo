@@ -566,7 +566,7 @@ class VCSMC:
 
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, N, None, A))
 
-        if self.args.cellphy_model == 'gt16':
+        if self.args.cellphy_model == 'gt16' and self.args.cellphy_error:
             core = self.gt_16_incorporate_error_rates(self.core, self.delta, self.epsilon)
         else:
             core = self.core
@@ -694,6 +694,8 @@ class VCSMC:
                 #print('\n Minibatch', j)
                 #print(sess.run([self.cost], feed_dict={self.core: data_batch}))
 
+            omitted = tf.constant("NONE")
+
             output = sess.run([self.cost,
                                self.stationary_probs,
                                self.Qmatrix,
@@ -707,9 +709,10 @@ class VCSMC:
                                self.left_branches_param,
                                self.right_branches_param,
                                self.jump_chains,
-                               self.nucleotide_exchangeability,
-                               self.delta,
-                               self.epsilon],
+                               self.nucleotide_exchangeability if self.args.cellphy_model in ['gt16', 'gt10'] else omitted,
+                               self.delta if self.args.cellphy_error else omitted,
+                               self.epsilon if self.args.cellphy_error else omitted,
+                               ],
                                feed_dict={self.core: data})
             cost = output[0]
             stats = output[1]
