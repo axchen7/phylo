@@ -171,9 +171,11 @@ class VCSMC:
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
         if args.cellphy_model == 'gt16':
             # assume A=16
-            # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
-            self.nucleotide_exchangeability = tf.Variable(np.ones(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
-            self.nucleotide_exchangeability = tf.concat([self.nucleotide_exchangeability, [tf.constant(1, dtype=tf.float64)]], axis=0)
+            # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T))
+            self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
+            # use relu to ensure all entries are positive
+            self.nucleotide_exchangeability = tf.nn.relu(self.nucleotide_exchangeability)
+            self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
 
             # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT, pi_CA, pi_GA, pi_TA, pi_GC, pi_TC, pi_TG)
             # use softmax to ensure all entries are positive
