@@ -741,7 +741,7 @@ class VCSMC:
             print('Exchangeability\n', exchangeability)
             print('Delta\n', delta)
             print('Epsilon\n', epsilon)
-            print('Q-matrix\n', Qs)
+            # print('Q-matrix\n', Qs)
             # print('Left branches\n', lb)
             # print('Right branches\n', rb)
             # print('Log Weights\n', np.round(log_Ws,3))
