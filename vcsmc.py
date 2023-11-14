@@ -213,8 +213,11 @@ class VCSMC:
 
     def get_stationary_probs(self):
         """ Compute stationary probabilities of the Q matrix """
-        denom = tf.reduce_sum(tf.exp(self.y_station))
-        return tf.expand_dims(tf.exp(self.y_station) / denom, axis=0)
+        if self.args.cellphy_model in ['gt16', 'gt10']:
+            return tf.expand_dims(self.y_station, axis=0)
+        else:
+            denom = tf.reduce_sum(tf.exp(self.y_station))
+            return tf.expand_dims(tf.exp(self.y_station) / denom, axis=0)
 
     def get_Q(self):
         """
