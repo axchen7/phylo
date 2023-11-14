@@ -708,7 +708,9 @@ class VCSMC:
 
             omitted = tf.constant("NONE")
 
-            output = sess.run([self.cost,
+            output = sess.run([
+                               self.elbo,
+                               self.regularization,
                                self.stationary_probs,
                                self.Qmatrix,
                                self.left_branches,
@@ -726,24 +728,30 @@ class VCSMC:
                                self.epsilon if self.args.cellphy_error else omitted,
                                ],
                                feed_dict={self.core: data})
-            cost = output[0]
-            stats = output[1]
-            Qs = output[2]
-            lb = output[3]
-            rb = output[4]
-            log_Ws = output[5]
-            log_liks = output[6]
-            log_lik_tilde = output[7]
-            log_lik_R = output[8]
-            overcount = output[9]
-            lb_param = output[10]
-            rb_param = output[11]
-            jc = output[12]
-            exchangeability = output[13]
-            delta = output[14]
-            epsilon = output[15]
+
+            [
+                elbo,
+                regularization,
+                stats,
+                Qs,
+                lb,
+                rb,
+                log_Ws,
+                log_liks,
+                log_lik_tilde,
+                log_lik_R,
+                overcount,
+                lb_param,
+                rb_param,
+                jc,
+                exchangeability,
+                delta,
+                epsilon,
+             ] = output
+
             print('Epoch', i+1)
-            print('ELBO\n', round(-cost, 3))
+            print('ELBO\n', round(elbo, 3))
+            print('Regularization\n', round(regularization, 3))
             print('Stationary probabilities\n', stats)
             print('Exchangeability\n', exchangeability)
             print('Delta\n', delta)
@@ -761,7 +769,7 @@ class VCSMC:
             # for i in range(len(jc)):
             #     print(jc[i])
             #     break
-            elbos.append(-cost)
+            elbos.append(elbo)
             Qmatrices.append(Qs)
             left_branches.append(lb)
             right_branches.append(rb)
