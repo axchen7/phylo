@@ -169,6 +169,7 @@ class VCSMC:
         self.A = len(self.genome_NxSxA[0, 0])
         self.left_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='left_branches_param'))
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
+        self.regularization = tf.constant(0, dtype=tf.float64)
         if args.cellphy_model == 'gt16':
             # assume A=16
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T))
@@ -181,6 +182,9 @@ class VCSMC:
             # use softmax to ensure all entries are positive
             self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
             self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+            
+            # prevent y_station from being too sparse
+            self.regularization += tf.reduce_sum(tf.square(self.y_station)) * 5e4
 
             self.Qmatrix = self.get_Q_GT16()
 
@@ -611,7 +615,7 @@ class VCSMC:
         self.right_branches = tf.gather(right_branches, list(range(1, N))) # remove the trivial index 0
         self.elbo = self.compute_log_ZSMC(log_weights)
         self.log_likelihood_R = self.get_log_likelihood(self.log_likelihood)
-        self.cost = - self.elbo
+        self.cost = - self.elbo + self.regularization
         self.log_likelihood_tilde = log_likelihood_tilde
         self.v_minus = v_minus
 
