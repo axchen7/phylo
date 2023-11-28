@@ -174,8 +174,8 @@ class VCSMC:
             # assume A=16
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T))
             self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
-            # use relu to ensure all entries are positive
-            self.nucleotide_exchangeability = tf.nn.relu(self.nucleotide_exchangeability)
+            # use square to ensure all entries are positive
+            self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
             self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
 
             # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT, pi_CA, pi_GA, pi_TA, pi_GC, pi_TC, pi_TG)
