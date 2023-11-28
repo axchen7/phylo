@@ -696,6 +696,8 @@ class VCSMC:
         ll = []
         ll_tilde = []
         ll_R = []
+        stationary_probs = []
+        exchangeabilities = []
 
         for i in tqdm(range(epochs)):
             bt = datetime.now()
@@ -778,6 +780,8 @@ class VCSMC:
             ll_R.append(log_lik_R)
             log_weights.append(log_Ws)
             jump_chain_evolution.append(jc)
+            stationary_probs.append(stats)
+            exchangeabilities.append(exchangeability)
             at = datetime.now()
             print('Time spent\n', at-bt, '\n-----------------------------------------')
         print("Done training.")
@@ -824,7 +828,10 @@ class VCSMC:
                       'jump_chain_evolution': jump_chain_evolution,
                       'best_epoch' : np.argmax(elbos),
                       'best_log_lik': best_log_lik,
-                      'best_jump_chain': best_jump_chain}
+                      'best_jump_chain': best_jump_chain,
+                      'stationary_probs': np.asarray(stationary_probs),
+                      'exchangeabilities': np.asarray(exchangeabilities),
+                    }
 
 
 
