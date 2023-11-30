@@ -182,9 +182,11 @@ class VCSMC:
             # use softmax to ensure all entries are positive
             self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
             self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+            # self.y_station = tf.constant(np.ones(16)/16, dtype=tf.float64, name='Stationary_probs')
             
             # prevent y_station from being too sparse
-            self.regularization += tf.reduce_sum(tf.square(self.y_station)) * 5e4
+            Lambda = 7e4
+            self.regularization += tf.reduce_sum(tf.square(self.y_station)) * Lambda
 
             self.Qmatrix = self.get_Q_GT16()
 
