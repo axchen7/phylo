@@ -193,6 +193,7 @@ class VCSMC:
             # use sigmoid to ensure errors are in [0, 1]
             self.delta = 1 / (1 + tf.exp(-tf.Variable(0, dtype=tf.float64, name='ADO_rate')))
             self.epsilon = 1 / (1 + tf.exp(-tf.Variable(0, dtype=tf.float64, name='ERR_rate')))
+            # self.epsilon = tf.constant(0, dtype=tf.float64, name='ERR_rate')
         elif args.cellphy_model == 'gt10':
             # assume A=10
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T)=1)
