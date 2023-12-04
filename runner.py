@@ -54,6 +54,9 @@ def parse_args():
     parser.add_argument('--cellphy_model',  # either 'gt10' or 'gt16'
                        default=None, 
                        type=str)
+    parser.add_argument('--cellphy_nn_Q',
+                       default=False,
+                       type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument('--cellphy_error',
                        default=False, 
                        type=lambda x: (str(x).lower() == 'true'))

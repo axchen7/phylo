@@ -169,6 +169,7 @@ class VCSMC:
         self.A = len(self.genome_NxSxA[0, 0])
         self.left_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='left_branches_param'))
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
+        self.core = tf.placeholder(dtype=tf.float64, shape=(K, self.N, None, self.A))
         self.regularization = tf.constant(0, dtype=tf.float64)
         if args.cellphy_model == 'gt16':
             # assume A=16
@@ -179,14 +180,30 @@ class VCSMC:
             self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
 
             # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT, pi_CA, pi_GA, pi_TA, pi_GC, pi_TC, pi_TG)
-            # use softmax to ensure all entries are positive
-            self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
-            self.y_station = self.y_station / tf.reduce_sum(self.y_station)
-            # self.y_station = tf.constant(np.ones(16)/16, dtype=tf.float64, name='Stationary_probs')
-            
-            # prevent y_station from being too sparse
-            Lambda = 7e4
-            self.regularization += tf.reduce_sum(tf.square(self.y_station)) * Lambda
+
+            if args.cellphy_nn_Q:
+                data_NxSxA = self.core[0]
+                data_SxNxA = tf.transpose(data_NxSxA, perm=[1,0,2])
+                
+                # use neural network to parameterize stationary probs
+                nn_input = tf.reshape(data_SxNxA, (-1, self.N * self.A))
+                layer1 = tf.keras.layers.Dense(16, activation='relu', dtype=tf.float64)
+                layer2 = tf.keras.layers.Dense(16, activation='softmax', dtype=tf.float64)
+                nn_output = layer2(layer1(nn_input))
+                # use mean of all samples as stationary probs
+                self.y_station = tf.reduce_mean(nn_output, axis=0)
+                # super-impose a uniform distribution on the stationary probs
+                self.y_station = self.y_station + tf.constant(np.ones(16)/16)
+                self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+            else:
+                # use softmax to ensure all entries are positive
+                self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
+                self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+                # self.y_station = tf.constant(np.ones(16)/16, dtype=tf.float64, name='Stationary_probs')
+                
+                # prevent y_station from being too sparse
+                Lambda = 7e4
+                self.regularization += tf.reduce_sum(tf.square(self.y_station)) * Lambda
 
             self.Qmatrix = self.get_Q_GT16()
 
@@ -579,8 +596,6 @@ class VCSMC:
         A = self.A
         K = self.K
 
-        self.core = tf.placeholder(dtype=tf.float64, shape=(K, N, None, A))
-
         if self.args.cellphy_model == 'gt16' and self.args.cellphy_error:
             core = self.gt_16_incorporate_error_rates(self.core, self.delta, self.epsilon)
         else:
@@ -790,7 +805,7 @@ class VCSMC:
         print("Done training.")
         
 
-        plt.imshow(sess.run(self.Qmatrix))
+        plt.imshow(sess.run(self.Qmatrix, feed_dict={self.core: data}))
         plt.title("Trained Q matrix")
         plt.savefig(save_dir + "Qmatrix.png")
 
