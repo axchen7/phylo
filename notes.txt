@@ -1,0 +1,31 @@
+Estimate true LL via uniform stationary probs
+    Best log likelihood: -23361.414281657293
+    Stationary probabilities similarity: 0.9878374799270644
+
+Lambda = 1e4
+    Best log likelihood: -2940.503246335585
+    Stationary probabilities similarity: 0.3322855058887249
+
+Lambda = 3e4
+    Best log likelihood: -5887.897026028251
+    Stationary probabilities similarity: 0.3406146922926791
+
+Lambda = 5e4
+    Best log likelihood: -10690.777961661342
+    Stationary probabilities similarity: 0.4494658535826054
+
+Lambda = 7e4
+    Best log likelihood: -22064.995402735996
+    Stationary probabilities similarity: 0.785469851386845
+
+Lambda = 8e4
+    Best log likelihood: -24340.303236942265
+    Stationary probabilities similarity: 0.982110845371143
+
+Lambda = 9e4
+    Best log likelihood: -24276.206350722197
+    Stationary probabilities similarity: 0.9816658980488836
+
+Lambda = 10e4
+    Best log likelihood: -24423.962667430296
+    Stationary probabilities similarity: 0.983684571409863

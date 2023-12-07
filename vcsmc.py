@@ -171,31 +171,41 @@ class VCSMC:
         self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, self.N, None, self.A))
         self.regularization = tf.constant(0, dtype=tf.float64)
+        self.regularization += tf.norm(self.left_branches_param, ord=2) / tf.norm(self.left_branches_param, ord=1) * 5e3
+        self.regularization += tf.norm(self.right_branches_param, ord=2) / tf.norm(self.right_branches_param, ord=1) * 5e3
         if args.cellphy_model == 'gt16':
             # assume A=16
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T))
-            self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
-            # use square to ensure all entries are positive
-            self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
-            self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
-
             # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT, pi_CA, pi_GA, pi_TA, pi_GC, pi_TC, pi_TG)
 
             if args.cellphy_nn_Q:
                 data_NxSxA = self.core[0]
                 data_SxNxA = tf.transpose(data_NxSxA, perm=[1,0,2])
+                nn_input = tf.reshape(data_SxNxA, (-1, self.N * self.A))
+
+                # use neural network to parameterize exchangeabilities
+                layer1 = tf.keras.layers.Dense(6, activation='relu', dtype=tf.float64)
+                layer2 = tf.keras.layers.Dense(6, activation='relu', dtype=tf.float64)
+                nn_output = layer2(layer1(nn_input))
+                # use mean of all samples as exchangeabilities
+                self.nucleotide_exchangeability = tf.reduce_mean(nn_output, axis=0)
+                # super-impose a uniform distribution on the exchangeabilities
+                # self.nucleotide_exchangeability *= 5
                 
                 # use neural network to parameterize stationary probs
-                nn_input = tf.reshape(data_SxNxA, (-1, self.N * self.A))
                 layer1 = tf.keras.layers.Dense(16, activation='relu', dtype=tf.float64)
                 layer2 = tf.keras.layers.Dense(16, activation='softmax', dtype=tf.float64)
                 nn_output = layer2(layer1(nn_input))
                 # use mean of all samples as stationary probs
                 self.y_station = tf.reduce_mean(nn_output, axis=0)
                 # super-impose a uniform distribution on the stationary probs
-                self.y_station = self.y_station + tf.constant(np.ones(16)/16)
-                self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+                self.y_station = 0.5 * self.y_station + 0.5 * (1/16)
             else:
+                self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
+                # use square to ensure all entries are positive
+                self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
+                self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
+
                 # use softmax to ensure all entries are positive
                 self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
