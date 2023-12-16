@@ -174,11 +174,6 @@ class VCSMC:
         if args.cellphy_model == 'gt16':
             # assume A=16
             # exchangeability: (r(A-C), r(A-G), r(A-T), r(C-G), r(C-T), r(G-T))
-            self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
-            # use square to ensure all entries are positive
-            self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
-            self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
-
             # stationary freqs: (pi_AA, pi_CC, pi_GG, pi_TT, pi_AC, pi_AG, pi_AT, pi_CG, pi_CT, pi_GT, pi_CA, pi_GA, pi_TA, pi_GC, pi_TC, pi_TG)
 
             if args.cellphy_nn_Q:
@@ -196,6 +191,11 @@ class VCSMC:
                 self.y_station = self.y_station + tf.constant(np.ones(16)/16)
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
             else:
+                self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
+                # use square to ensure all entries are positive
+                self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
+                self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
+
                 # use softmax to ensure all entries are positive
                 self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
