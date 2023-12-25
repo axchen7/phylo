@@ -205,10 +205,12 @@ class VCSMC:
                 self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
                 # use square to ensure all entries are positive
                 self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
-                self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_sum(self.nucleotide_exchangeability)
+                # normalize to ensure mean is 1
+                self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_mean(self.nucleotide_exchangeability)
 
                 # use softmax to ensure all entries are positive
                 self.y_station = tf.exp(tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs'))
+                # normalize to ensure sum is 1
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
                 # self.y_station = tf.constant(np.ones(16)/16, dtype=tf.float64, name='Stationary_probs')
                 
