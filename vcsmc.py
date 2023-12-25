@@ -797,6 +797,7 @@ class VCSMC:
             # print('Log likelihood tilde\n', np.round(log_lik_tilde,3))
             print('LB param:\n', lb_param)
             print('RB param:\n', rb_param)
+            print('Mean branch length:\n', (np.mean(lb_param) + np.mean(rb_param)) / 2)
             # print('Log likelihood at R\n', np.round(log_lik_R,3))
             # print('Jump chains')
             # for i in range(len(jc)):
