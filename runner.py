@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument('--branch_prior',
                        type=float,
                        help='Hyperparameter for branch length initialization.',
-                       default=np.log(10))
+                       default=1)
     parser.add_argument('--M',
                        type=int,
                        help='number of subparticles to compute look-ahead particles',
