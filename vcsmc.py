@@ -730,6 +730,7 @@ class VCSMC:
         ll_R = []
         stationary_probs = []
         exchangeabilities = []
+        mean_branch_lengths = []
 
         for i in tqdm(range(epochs)):
             bt = datetime.now()
@@ -782,6 +783,8 @@ class VCSMC:
                 delta,
                 epsilon,
              ] = output
+            
+            mean_branch_length = (np.mean(lb_param) + np.mean(rb_param)) / 2
 
             print('Epoch', i+1)
             print('ELBO\n', round(elbo, 3))
@@ -798,7 +801,7 @@ class VCSMC:
             # print('Log likelihood tilde\n', np.round(log_lik_tilde,3))
             print('LB param:\n', lb_param)
             print('RB param:\n', rb_param)
-            print('Mean branch length:\n', (np.mean(lb_param) + np.mean(rb_param)) / 2)
+            print('Mean branch length:\n', mean_branch_length)
             # print('Log likelihood at R\n', np.round(log_lik_R,3))
             # print('Jump chains')
             # for i in range(len(jc)):
@@ -815,6 +818,7 @@ class VCSMC:
             jump_chain_evolution.append(jc)
             stationary_probs.append(stats)
             exchangeabilities.append(exchangeability)
+            mean_branch_lengths.append(mean_branch_length)
             at = datetime.now()
             print('Time spent\n', at-bt, '\n-----------------------------------------')
         print("Done training.")
@@ -840,6 +844,14 @@ class VCSMC:
         plt.xlabel("Epochs")
         plt.title("Log likelihood convergence across epochs")
         plt.savefig(save_dir + "ll.png")
+        #plt.show()
+
+        plt.figure(figsize=(10,10))
+        plt.plot(mean_branch_lengths)
+        plt.ylabel("Mean branch length")
+        plt.xlabel("Epochs")
+        plt.title("Mean branch length across epochs")
+        plt.savefig(save_dir + "branch_lengths.png")
         #plt.show()
 
         # Save best log-likelihood value and jump chain
