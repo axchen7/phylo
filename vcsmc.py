@@ -217,7 +217,7 @@ class VCSMC:
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
                 
                 # prevent branch lengths from being too large
-                Lambda = 1e3
+                Lambda = 4e3
                 mean_branches = tf.reduce_mean(tf.concat([self.left_branches_param, self.right_branches_param], axis=0))
                 self.regularization += tf.square(mean_branches) * Lambda
 
