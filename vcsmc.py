@@ -202,18 +202,19 @@ class VCSMC:
                 self.regularization += tf.norm(self.left_branches_param, ord=2) / tf.norm(self.left_branches_param, ord=1) * 5e3
                 self.regularization += tf.norm(self.right_branches_param, ord=2) / tf.norm(self.right_branches_param, ord=1) * 5e3
             else:
-                self.nucleotide_exchangeability = tf.Variable(np.ones(6), dtype=tf.float64, name='Nucleotide_exchangeabilities')
-                # use square to ensure all entries are positive
-                self.nucleotide_exchangeability = tf.square(self.nucleotide_exchangeability)
+                self.nucleotide_exchangeability = tf.Variable(np.zeros(5), dtype=tf.float64, name='Nucleotide_exchangeabilities')
+                self.nucleotide_exchangeability = tf.concat([self.nucleotide_exchangeability, [tf.constant(0, dtype=tf.float64)]], axis=0)
+                # use exp to ensure all entries are positive
+                self.nucleotide_exchangeability = tf.exp(self.nucleotide_exchangeability)
                 # normalize to ensure mean is 1
                 self.nucleotide_exchangeability = self.nucleotide_exchangeability / tf.reduce_mean(self.nucleotide_exchangeability)
 
-                self.y_station = tf.Variable(np.zeros(16), dtype=tf.float64, name='Stationary_probs')
+                self.y_station = tf.Variable(np.zeros(15), dtype=tf.float64, name='Stationary_probs')
+                self.y_station = tf.concat([self.y_station, [tf.constant(0, dtype=tf.float64)]], axis=0)
                 # use softmax to ensure all entries are positive
                 self.y_station = tf.exp(self.y_station)
                 # normalize to ensure sum is 1
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
-                # self.y_station = tf.constant(np.ones(16)/16, dtype=tf.float64, name='Stationary_probs')
                 
                 # prevent branch lengths from being too large
                 Lambda = 1e3
