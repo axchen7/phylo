@@ -167,8 +167,8 @@ class VCSMC:
         self.N = len(self.genome_NxSxA)
         self.S = len(self.genome_NxSxA[0])
         self.A = len(self.genome_NxSxA[0, 0])
-        self.left_branches_param = tf.nn.relu(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='left_branches_param'))
-        self.right_branches_param = tf.nn.relu(tf.Variable(np.zeros(self.N-1)+self.args.branch_prior, dtype=tf.float64, name='right_branches_param'))
+        self.left_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+np.log(self.args.branch_prior), dtype=tf.float64, name='left_branches_param'))
+        self.right_branches_param = tf.exp(tf.Variable(np.zeros(self.N-1)+np.log(self.args.branch_prior), dtype=tf.float64, name='right_branches_param'))
         self.core = tf.placeholder(dtype=tf.float64, shape=(K, self.N, None, self.A))
         self.regularization = tf.constant(0, dtype=tf.float64)
         if args.cellphy_model == 'gt16':
@@ -215,9 +215,13 @@ class VCSMC:
                 self.y_station = tf.exp(self.y_station)
                 # normalize to ensure sum is 1
                 self.y_station = self.y_station / tf.reduce_sum(self.y_station)
+
+                # prevent y_station from being too sparse
+                Lambda = 1e4
+                self.regularization += tf.reduce_sum(tf.square(self.y_station)) * Lambda
                 
                 # prevent branch lengths from being too large
-                Lambda = 4e3
+                Lambda = 5e3
                 mean_branches = tf.reduce_mean(tf.concat([self.left_branches_param, self.right_branches_param], axis=0))
                 self.regularization += tf.square(mean_branches) * Lambda
 
