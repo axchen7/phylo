@@ -865,7 +865,7 @@ class VCSMC:
         print("Best log likelihood values:\n", best_log_lik)
         best_jump_chain = jump_chain_evolution[np.argmax(elbos)]
 
-        resultDict = {'cost': np.asarray(elbos),
+        resultDict = {'elbos': np.asarray(elbos),
                       'nParticles': self.K,
                       'nTaxa': self.N,
                       'lr': self.lr,
