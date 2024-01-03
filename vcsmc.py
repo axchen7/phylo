@@ -352,36 +352,6 @@ class VCSMC:
         flattened = tf.reshape(genome_KxNxSxA, (-1, 16))
         return tf.reshape(tf.vectorized_map(incorporate_error, flattened), (self.K, self.N, -1, 16))
 
-    def conditional_likelihood(self, l_data, r_data, l_branch, r_branch):
-        """
-        Computes conditional complete likelihood at an ancestor node
-        by passing messages from left and right children
-        """
-        #with tf.device('/gpu:0'): 
-        left_Pmatrix = tf.linalg.expm(self.Qmatrix * l_branch)
-        right_Pmatrix = tf.linalg.expm(self.Qmatrix * r_branch)
-        left_prob = tf.matmul(l_data, left_Pmatrix)
-        right_prob = tf.matmul(r_data, right_Pmatrix)
-        likelihood = tf.multiply(left_prob, right_prob)
-        return likelihood
-        
-    def broadcast_conditional_likelihood_M(self, l_data_SxA, r_data_SxA, l_branch_samples_M, r_branch_samples_M):
-        """
-        Broadcast conditional complete likelihood computation at ancestor node
-        by passing messages from left and right children.
-        Messages passed and Pmatrices are now 3-tensors to broadcast across subparticle x alphabet x alphabet (MxAxA)
-        """
-        left_message_MxAxA   = tf.tensordot( l_branch_samples_M, self.Qmatrix, axes=0)
-        right_message_MxAxA  = tf.tensordot( r_branch_samples_M, self.Qmatrix, axes=0)
-        left_Pmat_MxAxA      = tf.linalg.expm(left_message_MxAxA)
-        right_Pmat_MxAxA     = tf.linalg.expm(right_message_MxAxA)
-        left_prob_MxAxS   = tf.matmul(left_Pmat_MxAxA, l_data_SxA, transpose_b=True)  # Confirm dim(l_data): SxA
-        right_prob_MxAxS  = tf.matmul(right_Pmat_MxAxA, r_data_SxA, transpose_b=True)
-        left_prob_AxSxM = tf.transpose(left_prob_MxAxS, perm=[1,2,0])
-        right_prob_AxSxM = tf.transpose(right_prob_MxAxS, perm=[1,2,0])
-        likelihood_AxSxM = left_prob_AxSxM * right_prob_AxSxM
-        return likelihood_AxSxM
-
     def broadcast_conditional_likelihood_K(self, l_data_KxSxA, r_data_KxSxA, l_branch_samples_K, r_branch_samples_K):
         left_message_KxAxA   = tf.tensordot( l_branch_samples_K, self.Qmatrix, axes=0)
         right_message_KxAxA  = tf.tensordot( r_branch_samples_K, self.Qmatrix, axes=0)
@@ -391,47 +361,6 @@ class VCSMC:
         right_prob_KxSxA   = tf.matmul(r_data_KxSxA, right_Pmat_KxAxA)
         likelihood_KxSxA = left_prob_KxSxA * right_prob_KxSxA
         return likelihood_KxSxA
-
-    def compute_tree_posterior(self, data, leafnode_num):
-        """
-        Forms a log probability measure by dotting the stationary probs with tree likelihood
-        And add that to log-prior of tree topology
-        NOTE: we add log-prior of branch-lengths in body_update_weights
-        """
-        #with tf.device('/gpu:1'): 
-        tree_likelihood = tf.matmul(self.stationary_probs, data, transpose_b=True)
-        data_loglik = tf.reduce_sum(tf.log(tree_likelihood))
-        tree_logprior = -log_double_factorial(2 * tf.maximum(leafnode_num, 2) - 3)
-
-        return data_loglik + tree_logprior
-        
-    def broadcast_compute_tree_posterior_M(self, likelihood_AxSxM, leafnode_num):
-        """
-        Forms a log probability measure by dotting the stationary probs with tree likelihood
-        And add that to log-prior of tree topology
-        NOTE: we add log-prior of branch-lengths in body_update_weights
-        """
-        #with tf.device('/gpu:1'): 
-        tree_likelihood_SxM = tf.einsum('ia,asm->sm',self.stationary_probs, likelihood_AxSxM)
-        tree_likelihood_S = tf.reduce_mean(tree_likelihood_SxM, axis=1)
-        data_loglik = tf.reduce_sum(tf.log(tree_likelihood_S))
-        tree_logprior = -log_double_factorial(2 * tf.maximum(leafnode_num, 2) - 3)
-
-        return data_loglik + tree_logprior
-
-    def broadcast_compute_tree_posterior_K(self, data_KxSxA, leafnode_num_record):
-        """
-        Forms a log probability measure by dotting the stationary probs with tree likelihood
-        And add that to log-prior of tree topology
-        NOTE: we add log-prior of branch-lengths in body_update_weights
-        """
-        #with tf.device('/gpu:1'): 
-        stationary_probs = tf.tile(tf.expand_dims(tf.transpose(self.stationary_probs), axis=0), [self.K, 1, 1])
-        tree_lik = tf.squeeze(tf.matmul(data_KxSxA, stationary_probs))
-        tree_loglik = tf.reduce_sum(tf.log(tree_lik), axis=1)
-        tree_logprior = tf.reduce_sum(-log_double_factorial(2 * tf.maximum(leafnode_num_record, 2) - 3), axis=1)
-
-        return tree_loglik + tree_logprior
 
     def compute_forest_posterior(self, data_KxXxSxA, leafnode_num_record, r):
         """
