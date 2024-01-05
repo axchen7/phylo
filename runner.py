@@ -85,8 +85,9 @@ if __name__ == "__main__":
     hohna_data_7 = False
     hohna_data_8 = False
     primate_data_wang = False
-    cellphy_toy_data = False
     cellphy_simulated_data = False
+    cellphy_toy_data = False
+    cellphy_shearwater_data = False
     ginkgo = False
 
     args = parse_args()
@@ -226,12 +227,12 @@ if __name__ == "__main__":
         return datadict
 
 
-    if cellphy_toy_data:
-        datadict = parse_cellphy('data/cellphy_toy_set.phy')
-
-
     if cellphy_simulated_data:
         datadict = parse_cellphy('data/cellphy_simulated_set.phy')
+    elif cellphy_toy_data:
+        datadict = parse_cellphy('data/cellphy_toy_set.phy')
+    elif cellphy_shearwater_data:
+        datadict = parse_cellphy('data/cellphy_shearwater_set.phy')
 
 
     if simulate_data:
