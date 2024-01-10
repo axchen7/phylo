@@ -161,7 +161,7 @@ def train(
         mean_branch_lengths_list.append(mean_branch_length)
 
         with summary_writer.as_default(step=epoch):
-            tf.summary.scalar("Cost", result["elbo"])
+            tf.summary.scalar("Cost", result["cost"])
             tf.summary.scalar("ELBO", result["elbo"])
             tf.summary.scalar("Regularization", result["regularization"])
             tf.summary.scalar("Mean branch length", mean_branch_length)
