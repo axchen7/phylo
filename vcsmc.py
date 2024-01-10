@@ -221,7 +221,7 @@ class VCSMC:
                 self.regularization += tf.reduce_sum(tf.square(self.y_station)) * Lambda
                 
                 # prevent branch lengths from being too large
-                Lambda = 5e3
+                Lambda = 1e2
                 mean_branches = tf.reduce_mean(tf.concat([self.left_branches_param, self.right_branches_param], axis=0))
                 self.regularization += tf.square(mean_branches) * Lambda
 
@@ -484,8 +484,8 @@ class VCSMC:
         # Branch lengths
         left_branches_param_r = tf.gather(self.left_branches_param, r)
         right_branches_param_r = tf.gather(self.right_branches_param, r)
-        q_l_branch_dist = tfp.distributions.Uniform(low=0, high=left_branches_param_r * 2) # mean is left_branches_param_r
-        q_r_branch_dist = tfp.distributions.Uniform(low=0, high=right_branches_param_r * 2) # mean is right_branches_param_r
+        q_l_branch_dist = tfp.distributions.Exponential(rate=left_branches_param_r)
+        q_r_branch_dist = tfp.distributions.Exponential(rate=right_branches_param_r)
         q_l_branch_samples = q_l_branch_dist.sample(self.K) 
         q_r_branch_samples = q_r_branch_dist.sample(self.K) 
         left_branches = tf.concat([left_branches, [q_l_branch_samples]], axis=0) 
@@ -575,6 +575,11 @@ class VCSMC:
                               tf.TensorShape([K, None]), tf.TensorShape([None, K]), tf.TensorShape([None, K]), 
                               v_minus.get_shape(), tf.TensorShape([])])
         # ------------------+
+
+        # prevent branch lengths from being too large
+        Lambda = 5e3
+        mean_branches = tf.reduce_mean(tf.concat([left_branches, right_branches], axis=0))
+        self.regularization += tf.square(mean_branches) * Lambda
 
         self.log_weights = tf.gather(log_weights, list(range(1, N))) # remove the trivial index 0
         self.log_likelihood = tf.gather(log_likelihood, list(range(1, N))) # remove the trivial index 0
