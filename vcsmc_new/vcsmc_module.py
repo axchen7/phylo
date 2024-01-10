@@ -1,6 +1,6 @@
 import tensorflow as tf
-import numpy as np
 
+DTYPE_INT = tf.int32
 DTYPE_FLOAT = tf.float32
 
 
@@ -20,29 +20,33 @@ class VcsmcModule(tf.Module):
 
         # constants
 
-        self.N = N
-        self.K = K
-        self.A = 16
+        self.N = tf.constant(N)
+        self.K = tf.constant(K)
+        self.A = tf.constant(16)
 
         self.reg_lambda_stat_probs = reg_lambda_stat_probs
         self.reg_lambda_branch_params = reg_lambda_branch_params
 
         # variables
 
-        initial_branches_log = np.zeros(self.N - 1) + np.log(branch_prior)
+        initial_branches_log = tf.constant(
+            tf.math.log(float(branch_prior)), shape=[self.N - 1], dtype=DTYPE_FLOAT
+        )
 
         self._lb_params = tf.Variable(
-            initial_branches_log, dtype=DTYPE_FLOAT, name="left branch parameters"
+            initial_branches_log, name="left branch parameters"
         )
         self._rb_params = tf.Variable(
-            initial_branches_log, dtype=DTYPE_FLOAT, name="right branch parameters"
+            initial_branches_log, name="right branch parameters"
         )
 
         self._nucleotide_exchanges = tf.Variable(
-            np.zeros(5), dtype=DTYPE_FLOAT, name="nucleotide exchangeabilities"
+            tf.constant(0, shape=[5], dtype=DTYPE_FLOAT),
+            name="nucleotide exchangeabilities",
         )
         self._stat_probs = tf.Variable(
-            np.zeros(15), dtype=DTYPE_FLOAT, name="stationary probabilities"
+            tf.constant(0, shape=[15], dtype=DTYPE_FLOAT),
+            name="stationary probabilities",
         )
 
     @tf.function
@@ -143,4 +147,5 @@ class VcsmcModule(tf.Module):
 
 if __name__ == "__main__":
     test = VcsmcModule(N=10, K=10, branch_prior=1)
+    test(None)
     print(test.trainable_variables)
