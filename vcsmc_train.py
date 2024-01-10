@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 from vcsmc_module import VcsmcModule
 
@@ -14,7 +13,7 @@ def train(
 ):
     N = len(genome_NxSxA)
 
-    data = tf.constant([genome_NxSxA] * K)
+    data = np.array([genome_NxSxA] * K)
 
     vcsmc = VcsmcModule(N=N, K=K, branch_prior=branch_prior)
     vcsmc(data)

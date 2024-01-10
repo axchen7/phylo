@@ -1,5 +1,6 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
+import math
 
 DTYPE_INT = tf.int32
 DTYPE_FLOAT = tf.float32
@@ -42,23 +43,23 @@ class VcsmcModule(tf.Module):
         # variables
 
         initial_branches_log = tf.constant(
-            tf.math.log(float(branch_prior)), shape=[self.N - 1], dtype=DTYPE_FLOAT
+            math.log(branch_prior), shape=[self.N - 1], dtype=DTYPE_FLOAT
         )
 
         self._lb_params = tf.Variable(
-            initial_branches_log, dtype=DTYPE_FLOAT, name="left branch parameters"
+            initial_branches_log, dtype=DTYPE_FLOAT, name="left_branch_parameters"
         )
         self._rb_params = tf.Variable(
-            initial_branches_log, dtype=DTYPE_FLOAT, name="right branch parameters"
+            initial_branches_log, dtype=DTYPE_FLOAT, name="right_branch_parameters"
         )
 
         self._nucleotide_exchanges = tf.Variable(
             tf.constant(0, shape=[5], dtype=DTYPE_FLOAT),
-            name="nucleotide exchangeabilities",
+            name="nucleotide_exchangeabilities",
         )
         self._stat_probs = tf.Variable(
             tf.constant(0, shape=[15], dtype=DTYPE_FLOAT),
-            name="stationary probabilities",
+            name="stationary_probabilities",
         )
 
     # @tf.function
@@ -146,8 +147,8 @@ class VcsmcModule(tf.Module):
     # @tf.function
     def ncr(self, n, r):
         """Compute combinatorial term n choose r."""
-        numer = tf.reduce_prod(tf.range(n - r + 1, n + 1))
-        denom = tf.reduce_prod(tf.range(1, r + 1))
+        numer = tf.reduce_prod(tf.range(n - r + 1, n + 1, dtype=DTYPE_FLOAT))
+        denom = tf.reduce_prod(tf.range(1, r + 1, dtype=DTYPE_FLOAT))
         return numer / denom
 
     # @tf.function
@@ -574,6 +575,8 @@ class VcsmcModule(tf.Module):
         r = r + 1
 
         return (
+            stat_probs,
+            Q,
             log_weights,
             log_likelihood,
             log_likelihood_tilde,
@@ -617,7 +620,7 @@ class VcsmcModule(tf.Module):
         A = self.A
         K = self.K
 
-        core = tf.cast(core, DTYPE_FLOAT)
+        core = tf.convert_to_tensor(core, dtype=DTYPE_FLOAT)
 
         (
             lb_params,
@@ -638,17 +641,19 @@ class VcsmcModule(tf.Module):
         log_weights = tf.constant(0, shape=(1, K), dtype=DTYPE_FLOAT)
         log_likelihood = tf.constant(0, shape=(1, K), dtype=DTYPE_FLOAT)
         log_likelihood_tilde = tf.constant(
-            tf.math.log(1 / K), shape=[K], dtype=DTYPE_FLOAT
+            math.log(1 / K), shape=[K], dtype=DTYPE_FLOAT
         )
 
-        jump_chains = tf.constant("", shape=(K, 1))
-        jump_chain_tensor = tf.constant([self.taxa] * K, name="JumpChainK")
+        jump_chains = tf.constant("", shape=(K, 1), dtype=tf.string)
+        jump_chain_tensor = tf.constant([self.taxa] * K, dtype=tf.string)
         v_minus = tf.constant(
             1, shape=(K,), dtype=DTYPE_INT
         )  # to be used in overcounting_correct
 
         # --- MAIN LOOP ----+
         (
+            stat_probs,
+            Q,
             log_weights,
             log_likelihood,
             log_likelihood_tilde,
@@ -676,7 +681,7 @@ class VcsmcModule(tf.Module):
                 left_branches,
                 right_branches,
                 v_minus,
-                tf.constant(0),
+                tf.constant(0, dtype=DTYPE_INT),
             ],
             shape_invariants=[
                 stat_probs.get_shape(),
