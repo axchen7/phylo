@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 
+DTYPE_INT = tf.int32
 DTYPE_FLOAT = tf.float32
 
 
@@ -23,6 +24,8 @@ class VcsmcModule(tf.Module):
         self.N = N
         self.K = K
         self.A = 16
+
+        self.taxa = [str(i) for i in range(self.N)]
 
         self.reg_lambda_stat_probs = reg_lambda_stat_probs
         self.reg_lambda_branch_params = reg_lambda_branch_params
@@ -95,7 +98,7 @@ class VcsmcModule(tf.Module):
         return lb_params, rb_params, nucleotide_exchanges, stat_probs, Q, regularization
 
     @tf.function
-    def get_Q_GT16(self, nucleotide_exchanges: tf.Tensor, stat_probs: tf.Tensor):
+    def get_Q_GT16(self, nucleotide_exchanges, stat_probs):
         """
         Forms the transition matrix using the CellPhy GT16 model. Assumes A=16.
         """
@@ -128,7 +131,11 @@ class VcsmcModule(tf.Module):
         return Q
 
     @tf.function
-    def __call__(self, data_NxSxA: tf.Tensor):
+    def __call__(self, data_NxSxA):
+        """
+        Main sampling routine that performs combinatorial SMC by calling the rank update subroutine
+        """
+
         (
             lb_params,
             rb_params,
@@ -138,9 +145,61 @@ class VcsmcModule(tf.Module):
             regularization,
         ) = self.get_variables()
 
+        # accumulated values used by subsequent iteration
+
+        leafnode_num_record_KxN = tf.Variable(
+            tf.constant(1, shape=[self.K, self.N]), dtype=DTYPE_INT
+        )
+        v_minus_K = tf.Variable(tf.constant(1, shape=[self.K]), dtype=DTYPE_INT)
+
+        log_weights_NxK = tf.TensorArray(
+            DTYPE_FLOAT, size=self.N, element_shape=[self.K]
+        )
+        # TODO init log_weights_NxK with .write() ?
+
+        jump_chains_NxKxV = tf.TensorArray(  # V: variable dimension
+            dtype=tf.dtypes.string, size=self.N, element_shape=[self.K, None]
+        )
+
+        # accumulated values not used by subsequent iteration
+        # (0th entry is unused)
+
+        left_branches_NxK = tf.TensorArray(
+            DTYPE_FLOAT, size=self.N, element_shape=[self.K]
+        )
+        right_branches_NxK = tf.TensorArray(
+            DTYPE_FLOAT, size=self.N, element_shape=[self.K]
+        )
+
+        log_likelihood_NxK = tf.TensorArray(
+            DTYPE_FLOAT, size=self.N, element_shape=[self.K]
+        )
+        log_likelihood_tilde_NxK = tf.TensorArray(
+            DTYPE_FLOAT, size=self.N, element_shape=[self.K]
+        ).unstack([tf.constant(np.zeros(self.K) + np.log(1 / self.K))])
+
+        # main loop (N-1 iterations)
+        for r in tf.range(1, self.N):
+            # resample?
+            if r == 1:
+                # the first time, just initialize
+                initial_jc_K_V = tf.constant([self.taxa] * self.K)
+                jump_chains_NxKxV.write(r, initial_jc_K_V)
+            else:
+                # resample partial states by drawing from a categorical
+                # distribution whose parameters are normalized importance
+                # weights
+                log_weights_K = log_weights_NxK.read(r - 1)
+                log_normalized_weights_K = log_weights_K - tf.reduce_logsumexp(
+                    log_weights_K
+                )
+                indices_K = tf.random.categorical(
+                    tf.expand_dims(log_normalized_weights_K, axis=0), self.K
+                )[0]
+
         return Q
 
 
 if __name__ == "__main__":
     test = VcsmcModule(N=10, K=10, branch_prior=1)
-    print(test.trainable_variables)
+    test(None)
