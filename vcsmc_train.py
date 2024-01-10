@@ -62,6 +62,22 @@ def write_run_parameters(args, initial_elbo, optimizer, save_dir):
         rp.close()
 
 
+def get_optimizer(optimizer: str, lr: float):
+    # legacy optimizers are faster on Apple M1/M2/M3
+    optimizers = {
+        "Adadelta": keras.optimizers.legacy.Adadelta(learning_rate=lr),
+        "Adagrad": keras.optimizers.legacy.Adagrad(learning_rate=lr),
+        "Adamax": keras.optimizers.legacy.Adamax(learning_rate=lr),
+        "Adam": keras.optimizers.legacy.Adam(learning_rate=lr),
+        "Ftrl": keras.optimizers.legacy.Ftrl(learning_rate=lr),
+        "Nadam": keras.optimizers.legacy.Nadam(learning_rate=lr),
+        "RMSprop": keras.optimizers.legacy.RMSprop(learning_rate=lr),
+        "SGD": keras.optimizers.legacy.SGD(learning_rate=lr),
+    }
+
+    return optimizers[optimizer]
+
+
 def train(
     genome_NxSxA: np.ndarray,
     *,
@@ -108,11 +124,7 @@ def train(
     nucleotide_exchanges_list = []
     mean_branch_lengths_list = []
 
-    # legacy optimizers are faster on Apple M1/M2/M3
-    if optimizer == "Adam":
-        opt = keras.optimizers.legacy.Adam(learning_rate=lr)
-    else:
-        opt = keras.optimizers.legacy.SGD(learning_rate=lr)  # TODO
+    opt = get_optimizer(optimizer, lr)
 
     for epoch in tqdm(range(epochs)):
         # SKIP BATCHING!!!
