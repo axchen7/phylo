@@ -105,8 +105,9 @@ def train(
     nucleotide_exchanges_list = []
     mean_branch_lengths_list = []
 
+    # legacy optimizers are faster on Apple M1/M2/M3
     if optimizer == "Adam":
-        opt = keras.optimizers.Adam(learning_rate=lr)
+        opt = keras.optimizers.legacy.Adam(learning_rate=lr)
     else:
         opt = keras.optimizers.legacy.SGD(learning_rate=lr)  # TODO
 
