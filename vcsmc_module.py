@@ -731,6 +731,7 @@ class VcsmcModule(tf.Module):
         return (
             cost,
             elbo,
+            jump_chains,
             regularization,
             stat_probs,
             Q,
@@ -743,6 +744,5 @@ class VcsmcModule(tf.Module):
             v_minus,
             lb_params,
             rb_params,
-            jump_chains,
             nucleotide_exchanges,
         )
