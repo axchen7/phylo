@@ -200,9 +200,11 @@ class VcsmcModule(tf.Module):
         K = a.shape[0]
         a_reshaped = tf.reshape(a, [K * a_shape_1, -1])
         add_to_idx = a_shape_1 * tf.transpose(
-            tf.tile(tf.expand_dims(tf.range(K), axis=0), [idx_shape_1, 1])
+            tf.tile(
+                tf.expand_dims(tf.range(K, dtype=DTYPE_INT), axis=0), [idx_shape_1, 1]
+            )
         )
-        a_gathered = tf.gather(a_reshaped, idx + add_to_idx)
+        a_gathered = tf.gather(a_reshaped, tf.cast(idx, DTYPE_INT) + add_to_idx)
         a_gathered = tf.reshape(a_gathered, [K, -1])
         return a_gathered
 
@@ -215,17 +217,14 @@ class VcsmcModule(tf.Module):
             But it broadcasts and doesn't actually use for-loop.
         """
 
-        if a_shape_1 is None:
-            a_shape_1 = a.shape[1]
-        if idx_shape_1 is None:
-            idx_shape_1 = idx.shape[1]
-
         K = a.shape[0]
         a_reshaped = tf.reshape(a, [K * a_shape_1, -1, A])
         add_to_idx = a_shape_1 * tf.transpose(
-            tf.tile(tf.expand_dims(tf.range(K), axis=0), [idx_shape_1, 1])
+            tf.tile(
+                tf.expand_dims(tf.range(K, dtype=DTYPE_INT), axis=0), [idx_shape_1, 1]
+            )
         )
-        a_gathered = tf.gather(a_reshaped, idx + add_to_idx)
+        a_gathered = tf.gather(a_reshaped, tf.cast(idx, DTYPE_INT) + add_to_idx)
         a_gathered = tf.reshape(a_gathered, [K, idx_shape_1, -1, A])
         return a_gathered
 
@@ -620,7 +619,7 @@ class VcsmcModule(tf.Module):
         A = self.A
         K = self.K
 
-        core = tf.convert_to_tensor(core, dtype=DTYPE_FLOAT)
+        core = tf.cast(tf.convert_to_tensor(core), DTYPE_FLOAT)
 
         (
             lb_params,
