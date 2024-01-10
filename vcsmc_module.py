@@ -728,21 +728,21 @@ class VcsmcModule(tf.Module):
         log_likelihood_tilde = log_likelihood_tilde
         v_minus = v_minus
 
-        return (
-            cost,
-            elbo,
-            jump_chains,
-            regularization,
-            stat_probs,
-            Q,
-            left_branches,
-            right_branches,
-            log_weights,
-            log_likelihood,
-            log_likelihood_tilde,
-            log_likelihood_R,
-            v_minus,
-            lb_params,
-            rb_params,
-            nucleotide_exchanges,
-        )
+        return {
+            "cost": cost,
+            "elbo": elbo,
+            "jump_chains": jump_chains,
+            "regularization": regularization,
+            "stat_probs": stat_probs,
+            "Q": Q,
+            "left_branches": left_branches,
+            "right_branches": right_branches,
+            "log_weights": log_weights,
+            "log_likelihood": log_likelihood,
+            "log_likelihood_tilde": log_likelihood_tilde,
+            "log_likelihood_R": log_likelihood_R,
+            "v_minus": v_minus,
+            "lb_params": lb_params,
+            "rb_params": rb_params,
+            "nucleotide_exchanges": nucleotide_exchanges,
+        }
