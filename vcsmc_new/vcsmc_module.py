@@ -95,7 +95,7 @@ class VcsmcModule(tf.Module):
         return lb_params, rb_params, nucleotide_exchanges, stat_probs, Q, regularization
 
     @tf.function
-    def get_Q_GT16(self, nucleotide_exchanges: tf.Tensor, stat_probs: tf.Tensor):
+    def get_Q_GT16(self, nucleotide_exchanges, stat_probs):
         """
         Forms the transition matrix using the CellPhy GT16 model. Assumes A=16.
         """
@@ -128,7 +128,7 @@ class VcsmcModule(tf.Module):
         return Q
 
     @tf.function
-    def __call__(self, data_NxSxA: tf.Tensor):
+    def __call__(self, data_NxSxA):
         (
             lb_params,
             rb_params,
