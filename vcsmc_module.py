@@ -62,7 +62,7 @@ class VcsmcModule(tf.Module):
             name="stationary_probabilities",
         )
 
-    # @tf.function
+    @tf.function
     def get_variables(self):
         """
         Transforms model variables into values that are used in the actual computations.
@@ -111,7 +111,7 @@ class VcsmcModule(tf.Module):
         # return everything
         return lb_params, rb_params, nucleotide_exchanges, stat_probs, Q, regularization
 
-    # @tf.function
+    @tf.function
     def get_Q_GT16(self, nucleotide_exchanges, stat_probs):
         """
         Forms the transition matrix using the CellPhy GT16 model. Assumes A=16.
@@ -144,14 +144,14 @@ class VcsmcModule(tf.Module):
         Q = tf.linalg.set_diag(y_q, -hyphens)
         return Q
 
-    # @tf.function
+    @tf.function
     def ncr(self, n, r):
         """Compute combinatorial term n choose r."""
         numer = tf.reduce_prod(tf.range(n - r + 1, n + 1, dtype=DTYPE_FLOAT))
         denom = tf.reduce_prod(tf.range(1, r + 1, dtype=DTYPE_FLOAT))
         return numer / denom
 
-    # @tf.function
+    @tf.function
     def _double_factorial_loop_body(self, n, result, two):
         result = tf.where(
             tf.greater_equal(n, two),
@@ -160,12 +160,12 @@ class VcsmcModule(tf.Module):
         )
         return n - two, result, two
 
-    # @tf.function
+    @tf.function
     def _double_factorial_loop_condition(self, n, result, two):
         del result  # Unused
         return tf.cast(tf.math.count_nonzero(tf.greater_equal(n, two)), tf.bool)
 
-    # @tf.function
+    @tf.function
     def log_double_factorial(self, n):
         """
         Computes the double factorial of `n`. Note:
@@ -188,7 +188,7 @@ class VcsmcModule(tf.Module):
         )
         return result
 
-    # @tf.function
+    @tf.function
     def gather_across_2d(self, a, idx, a_shape_1, idx_shape_1):
         """
         Gathers as such:
@@ -206,7 +206,7 @@ class VcsmcModule(tf.Module):
         a_gathered = tf.reshape(a_gathered, [K, -1])
         return a_gathered
 
-    # @tf.function
+    @tf.function
     def gather_across_core(self, a, idx, a_shape_1, idx_shape_1, A):
         """
         Gathers from the core as such:
@@ -229,7 +229,7 @@ class VcsmcModule(tf.Module):
         a_gathered = tf.reshape(a_gathered, [K, idx_shape_1, -1, A])
         return a_gathered
 
-    # @tf.function
+    @tf.function
     def broadcast_conditional_likelihood_K(
         self, Q, l_data_KxSxA, r_data_KxSxA, l_branch_samples_K, r_branch_samples_K
     ):
@@ -242,7 +242,7 @@ class VcsmcModule(tf.Module):
         likelihood_KxSxA = left_prob_KxSxA * right_prob_KxSxA
         return likelihood_KxSxA
 
-    # @tf.function
+    @tf.function
     def compute_forest_posterior(
         self, stat_probs, data_KxXxSxA, leafnode_num_record, r
     ):
@@ -272,7 +272,7 @@ class VcsmcModule(tf.Module):
 
         return forest_loglik + forest_logprior
 
-    # @tf.function
+    @tf.function
     def overcounting_correct(self, leafnode_num_record):
         """
         Computes overcounting correction term to the proposal distribution.
@@ -283,7 +283,7 @@ class VcsmcModule(tf.Module):
         )
         return v_minus
 
-    # @tf.function
+    @tf.function
     def get_log_likelihood(
         self, log_likelihood, left_branches, right_branches, lb_params, rb_params
     ):
@@ -309,7 +309,7 @@ class VcsmcModule(tf.Module):
         )
         return log_likelihood_R
 
-    # @tf.function
+    @tf.function
     def compute_log_ZSMC(self, log_weights):
         """
         Forms the estimator log_ZSMC, a multi sample lower bound to the
@@ -323,7 +323,7 @@ class VcsmcModule(tf.Module):
         )
         return log_Z_SMC
 
-    # @tf.function
+    @tf.function
     def resample(self, core, leafnode_num_record, JC_K, log_weights):
         """
         Resample partial states by drawing from a categorical distribution whose
@@ -338,7 +338,7 @@ class VcsmcModule(tf.Module):
         resampled_JC_K = tf.gather(JC_K, indices)
         return resampled_core, resampled_record, resampled_JC_K, indices
 
-    # @tf.function
+    @tf.function
     def extend_partial_state(self, JCK, r):
         """
         Extends partial state by sampling two states to coalesce (Gumbel-max
@@ -371,7 +371,7 @@ class VcsmcModule(tf.Module):
         # return particle1, particle2, particle_coalesced, coalesced_indices, remaining_indices, q, JCK
         return coalesced_indices, remaining_indices, q, JCK
 
-    # @tf.function
+    @tf.function
     def cond_true_resample(
         self,
         log_likelihood_tilde,
@@ -399,7 +399,7 @@ class VcsmcModule(tf.Module):
             jump_chain_tensor,
         )
 
-    # @tf.function
+    @tf.function
     def cond_false_resample(
         self,
         log_likelihood_tilde,
@@ -420,7 +420,7 @@ class VcsmcModule(tf.Module):
             jump_chain_tensor,
         )
 
-    # @tf.function
+    @tf.function
     def body_rank_update(
         self,
         stat_probs,
@@ -590,7 +590,7 @@ class VcsmcModule(tf.Module):
             r,
         )
 
-    # @tf.function
+    @tf.function
     def cond_rank_update(
         self,
         stat_probs,
@@ -609,7 +609,7 @@ class VcsmcModule(tf.Module):
     ):
         return r < self.N - 1
 
-    # @tf.function
+    @tf.function
     def __call__(self, core):
         """
         Main sampling routine that performs combinatorial SMC by calling the

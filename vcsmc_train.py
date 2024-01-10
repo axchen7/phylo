@@ -13,7 +13,7 @@ def train(
 ):
     N = len(genome_NxSxA)
 
-    data = np.array([genome_NxSxA] * K)
+    data = np.array([genome_NxSxA] * K, dtype=np.float32)
 
     vcsmc = VcsmcModule(N=N, K=K, branch_prior=branch_prior)
     vcsmc(data)
