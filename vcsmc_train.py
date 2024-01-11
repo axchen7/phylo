@@ -105,6 +105,9 @@ def train(
     data = np.array([genome_NxSxA] * K, dtype=np.float32)
     batches = batch_data(data, batch_size)
 
+    save_dir = create_save_dir(args)
+    summary_writer = tf.summary.create_file_writer(save_dir)  # type: ignore
+
     print("Dataset shape (KxNxSxA):", data.shape)
 
     vcsmc = VcsmcModule(N=N, K=K, branch_prior=branch_prior)
@@ -114,12 +117,9 @@ def train(
     print("Initial ELBO:", initial_result["elbo"].numpy())
     print("Trainable variables:", vcsmc.trainable_variables)
 
-    save_dir = create_save_dir(args)
     write_run_parameters(args, initial_result["elbo"], optimizer, save_dir)
 
     print("Training begins...")
-
-    summary_writer = tf.summary.create_file_writer(save_dir)  # type: ignore
 
     elbo_list = []
     Q_list = []
