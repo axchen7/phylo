@@ -25,7 +25,7 @@ def batch_data(data, batch_size):
     if len(sites_list) != 0:
         slices.append(sites_list)
 
-    batches = [np.take(data, slice, axis=2) for slice in slices]
+    batches = [tf.gather(data, slice, axis=2) for slice in slices]
     return batches
 
 
@@ -102,7 +102,9 @@ def train(
 ):
     N = len(genome_NxSxA)
 
-    data = np.array([genome_NxSxA] * K, dtype=np.float32)
+    data = np.array([genome_NxSxA] * K)
+    data = tf.convert_to_tensor(data)
+
     batches = batch_data(data, batch_size)
 
     save_dir = create_save_dir(args)

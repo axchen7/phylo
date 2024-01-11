@@ -630,7 +630,7 @@ class VcsmcModule(tf.Module):
         A = self.A
         K = self.K
 
-        core = tf.cast(tf.convert_to_tensor(core), DTYPE_FLOAT)
+        core = tf.cast(core, DTYPE_FLOAT)
 
         (
             lb_params,
