@@ -234,8 +234,13 @@ class VcsmcModule(tf.Module):
     ):
         left_message_KxAxA = tf.tensordot(l_branch_samples_K, Q, axes=0)
         right_message_KxAxA = tf.tensordot(r_branch_samples_K, Q, axes=0)
-        left_Pmat_KxAxA = tf.linalg.expm(left_message_KxAxA)
-        right_Pmat_KxAxA = tf.linalg.expm(right_message_KxAxA)
+
+        # compute tf.linalg.expm using float64 to avoid numerical issues on GPU
+        left_Pmat_KxAxA = tf.linalg.expm(tf.cast(left_message_KxAxA, tf.float64))
+        left_Pmat_KxAxA = tf.cast(left_Pmat_KxAxA, DTYPE_FLOAT)
+        right_Pmat_KxAxA = tf.linalg.expm(tf.cast(right_message_KxAxA, tf.float64))
+        right_Pmat_KxAxA = tf.cast(right_Pmat_KxAxA, DTYPE_FLOAT)
+
         left_prob_KxSxA = tf.matmul(l_data_KxSxA, left_Pmat_KxAxA)
         right_prob_KxSxA = tf.matmul(r_data_KxSxA, right_Pmat_KxAxA)
         likelihood_KxSxA = left_prob_KxSxA * right_prob_KxSxA
