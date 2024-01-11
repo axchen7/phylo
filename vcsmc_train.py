@@ -78,6 +78,17 @@ def get_optimizer(optimizer: str, lr: float):
     return optimizers[optimizer]
 
 
+@tf.function
+def train_step(vcsmc, optimizer, data):
+    with tf.GradientTape() as tape:
+        result = vcsmc(data)
+
+    grads = tape.gradient(result["cost"], vcsmc.trainable_variables)
+    optimizer.apply_gradients(zip(grads, vcsmc.trainable_variables))  # type: ignore
+
+    return result
+
+
 def train(
     genome_NxSxA: np.ndarray,
     *,
@@ -137,11 +148,7 @@ def train(
         #     grads = tape.gradient(cost, vcsmc.trainable_variables)
         #     opt.apply_gradients(zip(grads, vcsmc.trainable_variables))
 
-        with tf.GradientTape() as tape:
-            result: dict[str, Any] = vcsmc(data)  # type: ignore
-
-        grads = tape.gradient(result["cost"], vcsmc.trainable_variables)
-        opt.apply_gradients(zip(grads, vcsmc.trainable_variables))  # type: ignore
+        result = train_step(vcsmc, opt, data)
 
         mean_branch_length = (
             np.mean(result["lb_params"].numpy()) + np.mean(result["rb_params"].numpy())
