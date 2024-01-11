@@ -427,6 +427,8 @@ class VcsmcModule(tf.Module):
     @tf.function
     def body_rank_update(
         self,
+        lb_params,
+        rb_params,
         stat_probs,
         Q,
         log_weights,
@@ -486,8 +488,8 @@ class VcsmcModule(tf.Module):
         ) = self.extend_partial_state(jump_chain_tensor, r)
 
         # Branch lengths
-        left_branches_param_r = tf.gather(self._lb_params, r)
-        right_branches_param_r = tf.gather(self._rb_params, r)
+        left_branches_param_r = tf.gather(lb_params, r)
+        right_branches_param_r = tf.gather(rb_params, r)
         q_l_branch_dist = tfp.distributions.Exponential(rate=left_branches_param_r)
         q_r_branch_dist = tfp.distributions.Exponential(rate=right_branches_param_r)
         q_l_branch_samples = q_l_branch_dist.sample(self.K)
@@ -579,6 +581,8 @@ class VcsmcModule(tf.Module):
         r = r + 1
 
         return (
+            lb_params,
+            rb_params,
             stat_probs,
             Q,
             log_weights,
@@ -597,6 +601,8 @@ class VcsmcModule(tf.Module):
     @tf.function
     def cond_rank_update(
         self,
+        lb_params,
+        rb_params,
         stat_probs,
         Q,
         log_weights,
@@ -656,6 +662,8 @@ class VcsmcModule(tf.Module):
 
         # --- MAIN LOOP ----+
         (
+            lb_params,
+            rb_params,
             stat_probs,
             Q,
             log_weights,
@@ -673,6 +681,8 @@ class VcsmcModule(tf.Module):
             self.cond_rank_update,
             self.body_rank_update,
             loop_vars=[
+                lb_params,
+                rb_params,
                 stat_probs,
                 Q,
                 log_weights,
@@ -688,6 +698,8 @@ class VcsmcModule(tf.Module):
                 tf.constant(0, dtype=DTYPE_INT),
             ],
             shape_invariants=[
+                lb_params.get_shape(),
+                rb_params.get_shape(),
                 stat_probs.get_shape(),
                 Q.get_shape(),
                 tf.TensorShape([None, K]),
