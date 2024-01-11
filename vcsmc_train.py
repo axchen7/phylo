@@ -103,20 +103,19 @@ def train(
     N = len(genome_NxSxA)
 
     data = np.array([genome_NxSxA] * K, dtype=np.float32)
-    # batches = batch_data(data, batch_size)
+    batches = batch_data(data, batch_size)
 
     print("Dataset shape (KxNxSxA):", data.shape)
 
     vcsmc = VcsmcModule(N=N, K=K, branch_prior=branch_prior)
 
     initial_result: dict[str, Any] = vcsmc(data)  # type: ignore
-    initial_elbo = initial_result["elbo"]
 
-    print("Initial ELBO:", initial_elbo)
+    print("Initial ELBO:", initial_result["elbo"].numpy())
     print("Trainable variables:", vcsmc.trainable_variables)
 
     save_dir = create_save_dir(args)
-    write_run_parameters(args, initial_elbo, optimizer, save_dir)
+    write_run_parameters(args, initial_result["elbo"], optimizer, save_dir)
 
     print("Training begins...")
 
@@ -138,23 +137,29 @@ def train(
     opt = get_optimizer(optimizer, lr)
 
     for epoch in tqdm(range(epochs)):
-        # SKIP BATCHING!!!
+        # track averages for relevant metrics across batches
+        cost_avg = keras.metrics.Mean()
+        elbo_avg = keras.metrics.Mean()
+        regularization_avg = keras.metrics.Mean()
 
-        # for batch in batches:
-        #     with tf.GradientTape() as tape:
-        #         cost = vcsmc(batch)[0]
-        #         elbo = vcsmc(batch)[1]
+        result: dict[str, Any] = {}
 
-        #     grads = tape.gradient(cost, vcsmc.trainable_variables)
-        #     opt.apply_gradients(zip(grads, vcsmc.trainable_variables))
+        for batch in tqdm(batches):
+            result = train_step(vcsmc, opt, batch)  # type: ignore
 
-        result = train_step(vcsmc, opt, data)
+            cost_avg.update_state(result["cost"])
+            elbo_avg.update_state(result["elbo"])
+            regularization_avg.update_state(result["regularization"])
+
+        cost = cost_avg.result().numpy()
+        elbo = elbo_avg.result().numpy()
+        regularization = regularization_avg.result().numpy()
 
         mean_branch_length = (
             np.mean(result["lb_params"].numpy()) + np.mean(result["rb_params"].numpy())
         ) / 2
 
-        elbo_list.append(result["elbo"].numpy())
+        elbo_list.append(elbo)
         Q_list.append(result["Q"].numpy())
         left_branches_list.append(result["left_branches"].numpy())
         right_branches_list.append(result["right_branches"].numpy())
@@ -168,9 +173,9 @@ def train(
         mean_branch_lengths_list.append(mean_branch_length)
 
         with summary_writer.as_default(step=epoch):
-            tf.summary.scalar("Cost", result["cost"])
-            tf.summary.scalar("ELBO", result["elbo"])
-            tf.summary.scalar("Regularization", result["regularization"])
+            tf.summary.scalar("Cost", cost)
+            tf.summary.scalar("ELBO", elbo)
+            tf.summary.scalar("Regularization", regularization)
             tf.summary.scalar("Mean branch length", mean_branch_length)
             tf.summary.histogram("Stationary probabilities", result["stat_probs"])
             tf.summary.histogram("Exchangeability", result["nucleotide_exchanges"])
@@ -179,8 +184,8 @@ def train(
             summary_writer.flush()
 
         print("Epoch", epoch)
-        print("ELBO:", round(result["elbo"].numpy(), 3))
-        print("Regularization:", round(result["regularization"].numpy(), 3))
+        print("ELBO:", round(elbo, 3))
+        print("Regularization:", round(regularization, 3))
         print("Mean branch length:", round(mean_branch_length, 3))
         print("Stationary probabilities:", result["stat_probs"].numpy())
         print("Exchangeability:", result["nucleotide_exchanges"].numpy())
