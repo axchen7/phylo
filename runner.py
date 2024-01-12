@@ -258,14 +258,18 @@ if __name__ == "__main__":
         #import pdb
         #pdb.set_trace()
 
-    if args.nested == True:
-        import vncsmc as vcsmc
-    else:
-        # import vcsmc_jet as vcsmc
-        import vcsmc as vcsmc
+    # if args.nested == True:
+    #     import vncsmc as vcsmc
+    # else:
+    #     # import vcsmc_jet as vcsmc
+    #     import vcsmc as vcsmc
 
 
     #pdb.set_trace()
-    vcsmc = vcsmc.VCSMC(datadict, K=args.n_particles, args=args)
+    # vcsmc = vcsmc.VCSMC(datadict, K=args.n_particles, args=args)
 
-    vcsmc.train(epochs=args.num_epoch, batch_size=args.batch_size, learning_rate=args.learning_rate, memory_optimization=args.memory_optimization)
+    # vcsmc.train(epochs=args.num_epoch, batch_size=args.batch_size, learning_rate=args.learning_rate, memory_optimization=args.memory_optimization)
+
+    import vcsmc_train
+
+    vcsmc_train.train(datadict["genome"], K=args.n_particles, branch_prior=args.branch_prior, epochs=args.num_epoch, batch_size=args.batch_size, lr=args.learning_rate, optimizer=args.optimizer, args=args)
