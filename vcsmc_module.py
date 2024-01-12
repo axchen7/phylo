@@ -445,7 +445,6 @@ class VcsmcModule(tf.Module):
             jump_chain_tensor,
         ) = tf.cond(  # type: ignore
             r > 0,
-            # TODO lambda???
             lambda: self.cond_true_resample(
                 log_likelihood_tilde,
                 core,
