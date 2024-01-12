@@ -14,7 +14,7 @@ class VcsmcModule(tf.Module):
         N: int,
         K: int,
         branch_prior: float,
-        reg_lambda_stat_probs: float = 1e4,
+        reg_lambda_stat_probs: float = 1e5,
         reg_lambda_branch_params: float = 1e2,
     ):
         """
