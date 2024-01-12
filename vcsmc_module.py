@@ -2,7 +2,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import math
 
-DTYPE_INT = tf.int32
 DTYPE_FLOAT = tf.float32
 
 
@@ -31,12 +30,12 @@ class VcsmcModule(tf.Module):
 
         # constants
 
-        self.N = N
-        self.K = K
+        self.N = int(N)
+        self.K = int(K)
         self.A = 16
 
-        self.reg_lambda_stat_probs = reg_lambda_stat_probs
-        self.reg_lambda_branch_params = reg_lambda_branch_params
+        self.reg_lambda_stat_probs = float(reg_lambda_stat_probs)
+        self.reg_lambda_branch_params = float(reg_lambda_branch_params)
 
         self.taxa = ["S" + str(i) for i in range(N)]
 
@@ -147,9 +146,9 @@ class VcsmcModule(tf.Module):
     @tf.function
     def ncr(self, n, r):
         """Compute combinatorial term n choose r."""
-        numer = tf.reduce_prod(tf.range(n - r + 1, n + 1, dtype=DTYPE_FLOAT))
-        denom = tf.reduce_prod(tf.range(1, r + 1, dtype=DTYPE_FLOAT))
-        return numer / denom
+        numer = tf.reduce_prod(tf.range(n - r + 1, n + 1))
+        denom = tf.reduce_prod(tf.range(1, r + 1))
+        return numer // denom
 
     @tf.function
     def _double_factorial_loop_body(self, n, result, two):
@@ -200,11 +199,9 @@ class VcsmcModule(tf.Module):
         K = a.shape[0]
         a_reshaped = tf.reshape(a, [K * a_shape_1, -1])
         add_to_idx = a_shape_1 * tf.transpose(
-            tf.tile(
-                tf.expand_dims(tf.range(K, dtype=DTYPE_INT), axis=0), [idx_shape_1, 1]
-            )
+            tf.tile(tf.expand_dims(tf.range(K), axis=0), [idx_shape_1, 1])
         )
-        a_gathered = tf.gather(a_reshaped, tf.cast(idx, DTYPE_INT) + add_to_idx)
+        a_gathered = tf.gather(a_reshaped, idx + add_to_idx)
         a_gathered = tf.reshape(a_gathered, [K, -1])
         return a_gathered
 
@@ -220,11 +217,9 @@ class VcsmcModule(tf.Module):
         K = a.shape[0]
         a_reshaped = tf.reshape(a, [K * a_shape_1, -1, A])
         add_to_idx = a_shape_1 * tf.transpose(
-            tf.tile(
-                tf.expand_dims(tf.range(K, dtype=DTYPE_INT), axis=0), [idx_shape_1, 1]
-            )
+            tf.tile(tf.expand_dims(tf.range(K), axis=0), [idx_shape_1, 1])
         )
-        a_gathered = tf.gather(a_reshaped, tf.cast(idx, DTYPE_INT) + add_to_idx)
+        a_gathered = tf.gather(a_reshaped, idx + add_to_idx)
         a_gathered = tf.reshape(a_gathered, [K, idx_shape_1, -1, A])
         return a_gathered
 
@@ -277,7 +272,8 @@ class VcsmcModule(tf.Module):
         Computes overcounting correction term to the proposal distribution.
         """
         v_minus = tf.reduce_sum(
-            leafnode_num_record - tf.cast(tf.equal(leafnode_num_record, 1), DTYPE_INT),
+            leafnode_num_record
+            - tf.cast(tf.equal(leafnode_num_record, 1), leafnode_num_record.dtype),
             axis=1,
         )
         return v_minus
@@ -347,13 +343,10 @@ class VcsmcModule(tf.Module):
         """
 
         # Compute combinatorial term
-        # pdb.set_trace()
-        q = 1 / self.ncr(self.N - r, 2)
-        data = tf.reshape(tf.range((self.N - r) * self.K), (self.K, self.N - r))
-        data = tf.math.mod(data, (self.N - r))
-        data = tf.cast(data, DTYPE_FLOAT)
+        ncr = self.ncr(self.N - r, 2)
+        q = tf.constant(1, DTYPE_FLOAT) / tf.cast(ncr, DTYPE_FLOAT)
         # Gumbel-max trick to sample without replacement
-        z = -tf.math.log(-tf.math.log(tf.random.uniform(tf.shape(data), 0, 1)))
+        z = -tf.math.log(-tf.math.log(tf.random.uniform([self.K, self.N - r], 0, 1)))
         top_values, coalesced_indices = tf.nn.top_k(z, 2)
         bottom_values, remaining_indices = tf.nn.top_k(tf.negative(z), self.N - r - 2)
         JC_keep = tf.gather(tf.reshape(JCK, [self.K * (self.N - r)]), remaining_indices)
@@ -452,6 +445,7 @@ class VcsmcModule(tf.Module):
             jump_chain_tensor,
         ) = tf.cond(  # type: ignore
             r > 0,
+            # TODO lambda???
             lambda: self.cond_true_resample(
                 log_likelihood_tilde,
                 core,
@@ -636,9 +630,7 @@ class VcsmcModule(tf.Module):
             regularization,
         ) = self.get_variables()
 
-        leafnode_num_record = tf.constant(
-            1, shape=(K, N), dtype=DTYPE_INT
-        )  # Keeps track of core
+        leafnode_num_record = tf.constant(1, shape=(K, N))  # Keeps track of core
 
         left_branches = tf.constant(0, shape=(1, K), dtype=DTYPE_FLOAT)
         right_branches = tf.constant(0, shape=(1, K), dtype=DTYPE_FLOAT)
@@ -651,9 +643,7 @@ class VcsmcModule(tf.Module):
 
         jump_chains = tf.constant("", shape=(K, 1), dtype=tf.string)
         jump_chain_tensor = tf.constant([self.taxa] * K, dtype=tf.string)
-        v_minus = tf.constant(
-            1, shape=(K,), dtype=DTYPE_INT
-        )  # to be used in overcounting_correct
+        v_minus = tf.constant(1, shape=[K])  # to be used in overcounting_correct
 
         # --- MAIN LOOP ----+
         (
@@ -690,7 +680,7 @@ class VcsmcModule(tf.Module):
                 left_branches,
                 right_branches,
                 v_minus,
-                tf.constant(0, dtype=DTYPE_INT),
+                tf.constant(0),
             ],
             shape_invariants=[
                 lb_params.get_shape(),
@@ -713,7 +703,7 @@ class VcsmcModule(tf.Module):
         # ------------------+
 
         # prevent branch lengths from being too large
-        Lambda = 5e3
+        Lambda = tf.constant(5e3, DTYPE_FLOAT)
         mean_branches = tf.reduce_mean(
             tf.concat([left_branches, right_branches], axis=0)
         )
