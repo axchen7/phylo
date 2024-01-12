@@ -121,6 +121,17 @@ def train(
 
     write_run_parameters(args, initial_result["elbo"], optimizer, save_dir)
 
+    print("Profiling...")
+
+    # profile another pass through the model (after graph is built)
+    # tf.summary.trace_on(graph=True, profiler=True)  # type: ignore
+    # vcsmc(data)
+    # with summary_writer.as_default():
+    #     tf.summary.trace_export(name="initial_vcsmc", step=0, profiler_outdir=save_dir)  # type: ignore
+
+    with tf.profiler.experimental.Profile(save_dir):
+        vcsmc(data)
+
     print("Training begins...")
 
     elbo_list = []
