@@ -702,13 +702,6 @@ class VcsmcModule(tf.Module):
         )
         # ------------------+
 
-        # prevent branch lengths from being too large
-        Lambda = tf.constant(5e3, DTYPE_FLOAT)
-        mean_branches = tf.reduce_mean(
-            tf.concat([left_branches, right_branches], axis=0)
-        )
-        regularization += tf.square(mean_branches) * Lambda
-
         log_weights = tf.gather(
             log_weights, list(range(1, N))
         )  # remove the trivial index 0
