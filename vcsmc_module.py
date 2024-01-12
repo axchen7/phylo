@@ -2,7 +2,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import math
 
-DTYPE_FLOAT = tf.float32
+DTYPE_FLOAT = tf.float64
 
 
 class VcsmcModule(tf.Module):
